@@ -20,3 +20,4 @@ For an existing PostgreSQL server, create a database, apply `db/init.sql`, and s
 ## Verify
 
 Run `npm run build` to compile the production app and check TypeScript.
+

@@ -5,7 +5,7 @@ import { Bond, BondInput, bondStatuses, couponFrequencies, currencies, dayCountC
 
 const blankBond = (): BondInput => ({
   isin: "", name: "", status: "ACTIVE", faceValue: "1000", quantity: "1", purchasePrice: "1000",
-  currency: "UAH", interestRate: "", purchaseDate: "", maturityDate: "", firstCouponDate: "",
+  currency: "UAH", interestRate: "", taxRate: "0", purchaseDate: "", maturityDate: "", firstCouponDate: "",
   couponFrequency: "SEMIANNUAL", dayCountConvention: "ACT/ACT", fixedCoupon: "0",
 });
 
@@ -98,6 +98,7 @@ export default function BondsTab() {
       <label className="form-field"><span>Purchase price <small>per bond</small></span><input required type="number" min="0" step="0.000001" value={form.purchasePrice} onChange={event => update("purchasePrice", event.target.value)}/></label>
       <label className="form-field"><span>Currency</span><select value={form.currency} onChange={event => update("currency", event.target.value)}>{currencies.map(value => <option key={value}>{value}</option>)}</select></label>
       <label className="form-field"><span>Interest rate (%)</span><input required type="number" min="0" step="0.000001" value={form.interestRate} onChange={event => update("interestRate", event.target.value)}/></label>
+      <label className="form-field"><span>Tax rate (%)</span><input required type="number" min="0" max="100" step="0.000001" value={form.taxRate} onChange={event => update("taxRate", event.target.value)}/></label>
       <label className="form-field"><span>Purchase date</span><input required type="date" value={form.purchaseDate} onChange={event => update("purchaseDate", event.target.value)}/></label>
       <label className="form-field"><span>Maturity date</span><input required type="date" min={form.purchaseDate} value={form.maturityDate} onChange={event => update("maturityDate", event.target.value)}/></label>
       <label className="form-field"><span>First coupon date</span><input required type="date" value={form.firstCouponDate} onChange={event => update("firstCouponDate", event.target.value)}/></label>

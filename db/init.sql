@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS bonds (
   first_coupon_date DATE NOT NULL,
   coupon_frequency VARCHAR(12) NOT NULL CHECK (coupon_frequency IN ('MONTHLY', 'QUARTERLY', 'SEMIANNUAL', 'ANNUAL', 'AT_MATURITY')),
   day_count_convention VARCHAR(7) NOT NULL CHECK (day_count_convention IN ('ACT/ACT', 'ACT/365', 'ACT/360', '30/360')),
-  fixed_coupon BOOLEAN NOT NULL,
+  fixed_coupon NUMERIC(18, 6) NOT NULL CHECK (fixed_coupon >= 0),
   CHECK (maturity_date >= purchase_date)
 );
 

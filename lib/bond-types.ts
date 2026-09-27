@@ -17,7 +17,7 @@ export type BondInput = {
   firstCouponDate: string;
   couponFrequency: typeof couponFrequencies[number];
   dayCountConvention: typeof dayCountConventions[number];
-  fixedCoupon: boolean;
+  fixedCoupon: string;
 };
 
 export type Bond = Omit<BondInput, "quantity"> & { id: string; quantity: number };
@@ -40,5 +40,5 @@ export function validateBond(value: unknown): value is BondInput {
     && (bond.maturityDate as string) >= (bond.purchaseDate as string) && (bond.firstCouponDate as string) <= (bond.maturityDate as string)
     && couponFrequencies.includes(bond.couponFrequency as typeof couponFrequencies[number])
     && dayCountConventions.includes(bond.dayCountConvention as typeof dayCountConventions[number])
-    && typeof bond.fixedCoupon === "boolean";
+    && decimal("fixedCoupon", true);
 }

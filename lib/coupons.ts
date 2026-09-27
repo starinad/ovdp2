@@ -36,7 +36,7 @@ function yearFraction(start: Date, end: Date, convention: BondInput["dayCountCon
     const yearEnd = new Date(Date.UTC(year + 1, 0, 1));
     const segmentStart = start > yearStart ? start : yearStart;
     const segmentEnd = end < yearEnd ? end : yearEnd;
-    if (segmentEnd > segmentStart) fraction += daysBetween(segmentStart, segmentEnd) / ((Date.UTC(year + 1, 0, 1) - yearStart) / msPerDay);
+    if (segmentEnd > segmentStart) fraction += daysBetween(segmentStart, segmentEnd) / daysBetween(yearStart, yearEnd);
   }
   return { days, fraction };
 }

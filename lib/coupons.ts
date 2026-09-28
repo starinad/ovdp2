@@ -51,13 +51,13 @@ function bankersRound(value: number) {
 
 export function generateCoupons(bond: BondInput) {
   const months = monthsPerCoupon[bond.couponFrequency];
-  if (!months || bond.status === "SOLD") return [];
+  if (bond.status === "SOLD") return [];
 
   const firstDate = utc(bond.firstCouponDate);
   const maturity = utc(bond.maturityDate);
   const purchase = utc(bond.purchaseDate);
-  const dates: Date[] = [];
-  for (let i = 0; ; i++) {
+  const dates: Date[] = months === 0 ? [maturity] : [];
+  for (let i = 0; months > 0; i++) {
     const date = addMonths(firstDate, months * i);
     if (date > maturity) break;
     dates.push(date);
@@ -77,7 +77,7 @@ export function generateCoupons(bond: BondInput) {
   for (let i = 0; i < dates.length; i++) {
     const paymentDate = dates[i];
     if (paymentDate <= purchase) continue;
-    const periodStart = i ? dates[i - 1] : addMonths(dates[0], -months);
+    const periodStart = i ? dates[i - 1] : months === 0 ? purchase : addMonths(dates[0], -months);
     const period = yearFraction(periodStart, paymentDate, bond.dayCountConvention);
     if (period.days <= 0) continue;
 

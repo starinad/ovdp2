@@ -20,21 +20,32 @@ try {
   const appliedSet = new Set(applied.map(({ version }) => version));
 
   if (schema[0].current && appliedSet.size === 0) {
-    for (const file of files) await client.query("INSERT INTO app_migrations (version) VALUES ($1) ON CONFLICT DO NOTHING", [file]);
+    for (const file of files.slice(0, 3)) {
+      await client.query("INSERT INTO app_migrations (version) VALUES ($1) ON CONFLICT DO NOTHING", [file]);
+      appliedSet.add(file);
+    }
     console.log("Database schema is current; recorded existing migrations.");
-  } else {
-    for (const file of files) {
-      if (appliedSet.has(file)) continue;
-      await client.query("BEGIN");
-      try {
-        await client.query(await readFile(`supabase/migrations/${file}`, "utf8"));
-        await client.query("INSERT INTO app_migrations (version) VALUES ($1)", [file]);
-        await client.query("COMMIT");
-        console.log(`Applied ${file}`);
-      } catch (error) {
-        await client.query("ROLLBACK");
-        throw error;
+  }
+
+  for (const file of files) {
+    if (appliedSet.has(file)) continue;
+    await client.query("BEGIN");
+    try {
+      if (file === "20260928120000_add_bond_owner.sql") {
+        const host = new URL(databaseUrl).hostname;
+        if (!["localhost", "127.0.0.1", "::1", "[::1]"].includes(host)) {
+          throw new Error("Bond ownership migration requires an owner backfill before applying to a non-local database.");
+        }
+        await client.query("DELETE FROM coupons");
+        await client.query("DELETE FROM bonds");
       }
+      await client.query(await readFile(`supabase/migrations/${file}`, "utf8"));
+      await client.query("INSERT INTO app_migrations (version) VALUES ($1)", [file]);
+      await client.query("COMMIT");
+      console.log(`Applied ${file}`);
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
     }
   }
 } finally {

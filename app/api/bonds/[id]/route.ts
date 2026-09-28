@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getPool } from "@/lib/db";
 import { validateBond } from "@/lib/bond-types";
 import { replaceCouponSchedule } from "@/lib/coupons";
+import { requireUserId } from "@/lib/require-user";
 import type { PoolClient } from "pg";
 
 export const runtime = "nodejs";
@@ -13,6 +14,8 @@ const columns = `id, isin, name, status, face_value AS "faceValue", quantity,
 const validId = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const ownerId = await requireUserId();
+  if (!ownerId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await params;
   if (!validId(id)) return NextResponse.json({ error: "Bond not found" }, { status: 404 });
   let bond: unknown;
@@ -22,9 +25,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   try {
     client = await getPool().connect();
     await client.query("BEGIN");
-    const values = [bond.isin, bond.name, bond.status, bond.faceValue, bond.quantity, bond.purchasePrice, bond.currency, bond.interestRate, bond.taxRate, bond.purchaseDate, bond.maturityDate, bond.firstCouponDate, bond.couponFrequency, bond.dayCountConvention, bond.fixedCoupon, id];
+    const values = [bond.isin, bond.name, bond.status, bond.faceValue, bond.quantity, bond.purchasePrice, bond.currency, bond.interestRate, bond.taxRate, bond.purchaseDate, bond.maturityDate, bond.firstCouponDate, bond.couponFrequency, bond.dayCountConvention, bond.fixedCoupon, id, ownerId];
     const { rows } = await client.query(
-      `UPDATE bonds SET isin=$1, name=$2, status=$3, face_value=$4, quantity=$5, purchase_price=$6, currency=$7, interest_rate=$8, tax_rate=$9, purchase_date=$10, maturity_date=$11, first_coupon_date=$12, coupon_frequency=$13, day_count_convention=$14, fixed_coupon=$15 WHERE id=$16 RETURNING ${columns}`,
+      `UPDATE bonds SET isin=$1, name=$2, status=$3, face_value=$4, quantity=$5, purchase_price=$6, currency=$7, interest_rate=$8, tax_rate=$9, purchase_date=$10, maturity_date=$11, first_coupon_date=$12, coupon_frequency=$13, day_count_convention=$14, fixed_coupon=$15 WHERE id=$16 AND owner_id=$17 RETURNING ${columns}`,
       values,
     );
     if (!rows.length) {
@@ -42,10 +45,12 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 }
 
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const ownerId = await requireUserId();
+  if (!ownerId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await params;
   if (!validId(id)) return NextResponse.json({ error: "Bond not found" }, { status: 404 });
   try {
-    const { rowCount } = await getPool().query("DELETE FROM bonds WHERE id = $1", [id]);
+    const { rowCount } = await getPool().query("DELETE FROM bonds WHERE id = $1 AND owner_id = $2", [id, ownerId]);
     return rowCount ? new Response(null, { status: 204 }) : NextResponse.json({ error: "Bond not found" }, { status: 404 });
   } catch (error) {
     console.error("Could not delete bond", error);

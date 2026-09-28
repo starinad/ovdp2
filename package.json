@@ -3,10 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "npm run db:up && npm run db:migrate && next dev",
     "build": "next build",
     "start": "next start",
-    "db:up": "docker compose up -d db",
+    "db:up": "docker compose up -d --wait db",
+    "db:migrate": "node scripts/migrate.mjs",
     "db:down": "docker compose down"
   },
   "dependencies": {

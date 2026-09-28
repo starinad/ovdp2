@@ -16,6 +16,12 @@ type LiveBond = {
 };
 
 const price = (value: number, currency: string) => new Intl.NumberFormat("uk-UA", { style: "currency", currency, maximumFractionDigits: 2 }).format(value);
+const couponsByDate = (coupons: Coupon[]) => [...coupons].sort((a, b) => {
+  if (a.type === "Погашення" && b.type === "Погашення") return 0;
+  if (a.type === "Погашення") return 1;
+  if (b.type === "Погашення") return -1;
+  return a.paymentDate.split(".").reverse().join("-").localeCompare(b.paymentDate.split(".").reverse().join("-"));
+});
 
 export default function LivePricesTab() {
   const [bonds, setBonds] = useState<LiveBond[]>([]);
@@ -46,7 +52,7 @@ export default function LivePricesTab() {
           <tr className="live-bond-row" tabIndex={0} role="button" aria-expanded={expandedIsin === bond.isin} aria-controls={`coupons-${bond.isin}`} onClick={() => setExpandedIsin(expandedIsin === bond.isin ? null : bond.isin)} onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setExpandedIsin(expandedIsin === bond.isin ? null : bond.isin); } }}>
             <td><strong>{bond.isin}</strong></td><td>{bond.military ? "Military" : "Government"}</td><td>{bond.maturity}</td><td>{bond.termMaturity}</td><td>{bond.quotationDate}</td><td>{price(bond.sellPrice!, bond.currency)}</td><td>{bond.sellYield}%</td>
           </tr>
-          {expandedIsin === bond.isin && <tr><td colSpan={7} className="live-coupon-cell"><div id={`coupons-${bond.isin}`}><strong>Coupon schedule</strong>{bond.coupons?.length ? <div className="live-coupon-list">{bond.coupons.map(coupon => <div className="live-coupon-row" key={`${coupon.paymentDate}-${coupon.type}`}><span>{coupon.type}</span><span>{coupon.paymentDate}</span><strong>{price(coupon.value, bond.currency)}</strong></div>)}</div> : <p>No coupons available.</p>}</div></td></tr>}
+          {expandedIsin === bond.isin && <tr><td colSpan={7} className="live-coupon-cell"><div id={`coupons-${bond.isin}`}><strong>Coupon schedule</strong>{bond.coupons?.length ? <div className="live-coupon-list">{couponsByDate(bond.coupons).map(coupon => <div className="live-coupon-row" key={`${coupon.paymentDate}-${coupon.type}`}><span>{coupon.type}</span><span>{coupon.paymentDate}</span><strong>{price(coupon.value, bond.currency)}</strong></div>)}</div> : <p>No coupons available.</p>}</div></td></tr>}
         </Fragment>)}
       </tbody></table></div>}
     </section>

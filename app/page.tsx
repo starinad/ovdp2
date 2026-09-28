@@ -3,9 +3,10 @@
 import { useState } from "react";
 import BondsTab from "./BondsTab";
 import CouponsTab from "./CouponsTab";
+import LivePricesTab from "./LivePricesTab";
 import SignOutButton from "./SignOutButton";
 
-const tabs = ["Analytics", "Bonds", "Coupons", "Cashflow"] as const;
+const tabs = ["Analytics", "Bonds", "Coupons", "Cashflow", "Live Prices"] as const;
 type Tab = typeof tabs[number];
 
 const positions = [
@@ -61,11 +62,11 @@ function Analytics() {
 }
 
 function SimpleTab({ tab }: { tab: Tab }) {
-  const descriptions: Record<Tab, string> = { Analytics: "", Bonds: "All your Ukrainian government bond positions in one place.", Coupons: "Upcoming interest payments from your bond portfolio.", Cashflow: "A timeline of expected coupon and maturity payments." };
+  const descriptions: Record<Tab, string> = { Analytics: "", Bonds: "All your Ukrainian government bond positions in one place.", Coupons: "Upcoming interest payments from your bond portfolio.", Cashflow: "A timeline of expected coupon and maturity payments.", "Live Prices": "Current government bond prices and yields." };
   return <div className="simple-panel panel"><div className="eyebrow">PORTFOLIO</div><h1>{tab}</h1><p>{descriptions[tab]}</p><div className="simple-metrics"><span><small>{tab === "Bonds" ? "ACTIVE POSITIONS" : tab === "Coupons" ? "NEXT PAYMENT" : "NEXT 30 DAYS"}</small><strong>{tab === "Bonds" ? "4 bonds" : tab === "Coupons" ? "₴ 24,480" : "₴ 24,480"}</strong></span><span><small>PORTFOLIO VALUE</small><strong>₴ 3,259,000</strong></span><button className="button primary"><Icon name="plus" size={16}/>{tab === "Bonds" ? "Add bond" : "Add transaction"}</button></div><div className="empty-table"><span className="empty-icon"><Icon name={tab === "Bonds" ? "layers" : tab === "Coupons" ? "calendar" : "arrows"} size={23}/></span><strong>{tab === "Bonds" ? "Your positions are ready" : tab === "Coupons" ? "Coupon schedule" : "Cashflow schedule"}</strong><span>Connect your transactions to see the full picture here.</span></div></div>;
 }
 
 export default function Home() {
   const [active, setActive] = useState<Tab>("Bonds");
-  return <div className="app-shell"><header className="topbar"><a className="brand" href="#"><span className="brand-mark"><span/></span><span>obl<span className="brand-dot">.</span>ig</span></a><nav className="main-nav" aria-label="Main navigation">{tabs.map((tab, i)=><button key={tab} onClick={()=>setActive(tab)} className={active === tab ? "nav-item active" : "nav-item"}><Icon name={["grid","layers","calendar","arrows"][i]}/>{tab}</button>)}</nav><div className="top-actions"><button className="search-button"><Icon name="search"/><span>Search</span><kbd>⌘ K</kbd></button><button className="notification"><Icon name="bell"/><i/></button><span className="top-divider"/><SignOutButton/></div></header><main className="main-content">{active === "Analytics" ? <Analytics/> : active === "Bonds" ? <BondsTab/> : active === "Coupons" ? <CouponsTab/> : <SimpleTab tab={active}/>}<footer className="footer"><span>© 2026 OBLIG</span><span><i/> All systems operational</span><span>Data refreshed a moment ago</span></footer></main></div>;
+  return <div className="app-shell"><header className="topbar"><a className="brand" href="#"><span className="brand-mark"><span/></span><span>obl<span className="brand-dot">.</span>ig</span></a><nav className="main-nav" aria-label="Main navigation">{tabs.map((tab, i)=><button key={tab} onClick={()=>setActive(tab)} className={active === tab ? "nav-item active" : "nav-item"}><Icon name={["grid","layers","calendar","arrows","search"][i]}/>{tab}</button>)}</nav><div className="top-actions"><button className="search-button"><Icon name="search"/><span>Search</span><kbd>⌘ K</kbd></button><button className="notification"><Icon name="bell"/><i/></button><span className="top-divider"/><SignOutButton/></div></header><main className="main-content">{active === "Analytics" ? <Analytics/> : active === "Bonds" ? <BondsTab/> : active === "Coupons" ? <CouponsTab/> : active === "Live Prices" ? <LivePricesTab/> : <SimpleTab tab={active}/>}<footer className="footer"><span>© 2026 OBLIG</span><span><i/> All systems operational</span><span>Data refreshed a moment ago</span></footer></main></div>;
 }

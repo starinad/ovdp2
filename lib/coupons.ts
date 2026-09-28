@@ -1,4 +1,4 @@
-import { BondInput } from "@/lib/bond-types";
+import type { BondInput } from "@/lib/bond-types";
 import type { PoolClient } from "pg";
 
 const monthsPerCoupon = { MONTHLY: 1, QUARTERLY: 3, SEMIANNUAL: 6, ANNUAL: 12, AT_MATURITY: 0 };

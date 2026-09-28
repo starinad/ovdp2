@@ -18,7 +18,7 @@ export default function BondsTab() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("ALL");
+  const [status, setStatus] = useState("ACTIVE");
   const [form, setForm] = useState<BondInput | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -38,10 +38,11 @@ export default function BondsTab() {
 
   useEffect(() => { void load(); }, [load]);
 
-  const visibleBonds = useMemo(() => bonds.filter(bond =>
-    (status === "ALL" || bond.status === status)
-    && `${bond.name} ${bond.isin}`.toLowerCase().includes(search.toLowerCase().trim())), [bonds, search, status]);
-  const totalQuantity = bonds.reduce((sum, bond) => sum + bond.quantity, 0);
+  const statusBonds = useMemo(() => bonds.filter(bond => status === "ALL" || bond.status === status), [bonds, status]);
+  const visibleBonds = useMemo(() => statusBonds.filter(bond =>
+    `${bond.name} ${bond.isin}`.toLowerCase().includes(search.toLowerCase().trim())), [statusBonds, search]);
+  const totalQuantity = statusBonds.reduce((sum, bond) => sum + bond.quantity, 0);
+  const statusLabel = status === "ALL" ? "All" : label(status);
 
   function openForm(bond?: Bond) {
     setEditingId(bond?.id ?? null);
@@ -79,15 +80,14 @@ export default function BondsTab() {
   return <>
     <div className="welcome-row bonds-welcome"><div><div className="eyebrow">YOUR PORTFOLIO</div><h1>Bond <span>holdings.</span></h1><p className="subhead">Manage your Ukrainian government bond positions.</p></div><button className="button primary add-bond" onClick={() => openForm()}><span>＋</span> Add bond</button></div>
     <section className="bond-summary">
-      <article className="panel bond-summary-card"><span>Total positions</span><strong>{bonds.length}</strong><small>Bond instruments</small></article>
       <article className="panel bond-summary-card"><span>Total quantity</span><strong>{totalQuantity.toLocaleString("en-US")}</strong><small>Individual bonds held</small></article>
-      <article className="panel bond-summary-card"><span>Active bonds</span><strong>{bonds.filter(bond => bond.status === "ACTIVE").length}</strong><small>Currently accruing</small></article>
+      <article className="panel bond-summary-card"><span>{statusLabel} bonds</span><strong>{statusBonds.length.toLocaleString("en-US")}</strong><small>Bond positions</small></article>
     </section>
     <section className="panel bonds-panel">
-      <div className="bonds-toolbar"><div><h2>All bonds <span>{bonds.length}</span></h2><p>Your saved bond details and coupon terms</p></div><div className="bond-filters"><label className="bond-search"><span>⌕</span><input aria-label="Search bonds" placeholder="Search by name or ISIN" value={search} onChange={event => setSearch(event.target.value)}/></label><select aria-label="Filter by status" value={status} onChange={event => setStatus(event.target.value)}><option value="ALL">All statuses</option>{bondStatuses.map(value => <option key={value} value={value}>{label(value)}</option>)}</select></div></div>
+      <div className="bonds-toolbar"><div><h2>{statusLabel} bonds <span>{statusBonds.length}</span></h2><p>Your saved bond details and coupon terms</p></div><div className="bond-filters"><label className="bond-search"><span>⌕</span><input aria-label="Search bonds" placeholder="Search by name or ISIN" value={search} onChange={event => setSearch(event.target.value)}/></label><select aria-label="Filter by status" value={status} onChange={event => setStatus(event.target.value)}><option value="ALL">All statuses</option>{bondStatuses.map(value => <option key={value} value={value}>{label(value)}</option>)}</select></div></div>
       {error && <div className="bond-alert" role="alert"><span>{error}</span><button onClick={() => void load()}>Retry</button></div>}
       {loading ? <div className="bond-state">Loading bonds…</div> : visibleBonds.length === 0 ? <div className="bond-state"><div className="empty-icon">₴</div><strong>{bonds.length ? "No bonds match your filters" : "No bonds added yet"}</strong><span>{bonds.length ? "Try changing the search or status filter." : "Add your first bond to start tracking your holdings."}</span>{!bonds.length && <button className="button primary" onClick={() => openForm()}>＋ Add your first bond</button>}</div> : <div className="bond-table-wrap"><table className="bond-table"><thead><tr><th>Bond / ISIN</th><th>Status</th><th>Face value</th><th>Quantity</th><th>Purchase price</th><th>Interest rate</th><th>Purchase date</th><th>Maturity</th><th>Coupon terms</th><th/></tr></thead><tbody>{visibleBonds.map(bond => <tr key={bond.id}><td><strong>{bond.name}</strong><small>{bond.isin}</small></td><td><span className={`status-pill status-${bond.status.toLowerCase()}`}>{label(bond.status)}</span></td><td>{amount(bond.faceValue, bond.currency)}</td><td>{bond.quantity.toLocaleString("en-US")}</td><td>{amount(bond.purchasePrice, bond.currency)}</td><td>{bond.interestRate}%</td><td>{displayDate(bond.purchaseDate)}</td><td>{displayDate(bond.maturityDate)}</td><td><strong>{label(bond.couponFrequency)}</strong><small>{bond.dayCountConvention} · {amount(bond.fixedCoupon, bond.currency)} per payment</small></td><td><div className="bond-actions"><button aria-label={`Edit ${bond.name}`} title="Edit" onClick={() => openForm(bond)}>✎</button><button aria-label={`Remove ${bond.name}`} title="Remove" onClick={() => void remove(bond)}>×</button></div></td></tr>)}</tbody></table></div>}
-      {!loading && bonds.length > 0 && <div className="bond-table-footer">Showing {visibleBonds.length} of {bonds.length} positions <span>Amounts shown in each bond’s currency</span></div>}
+      {!loading && statusBonds.length > 0 && <div className="bond-table-footer">Showing {visibleBonds.length} of {statusBonds.length} positions <span>Amounts shown in each bond’s currency</span></div>}
     </section>
     {form && <div className="bond-modal-backdrop" onMouseDown={event => { if (event.target === event.currentTarget && !saving) setForm(null); }}><section className="bond-modal" role="dialog" aria-modal="true" aria-labelledby="bond-form-title"><div className="bond-modal-head"><div><div className="eyebrow">BOND DETAILS</div><h2 id="bond-form-title">{editingId ? "Edit bond" : "Add a bond"}</h2><p>Enter the bond’s instrument and coupon information.</p></div><button className="modal-close" aria-label="Close" onClick={() => setForm(null)}>×</button></div><form onSubmit={save}><div className="bond-form-grid">
       <label className="form-field"><span>ISIN</span><input required maxLength={12} minLength={12} pattern="[A-Z]{2}[A-Z0-9]{9}[0-9]" title="Enter a 12-character ISIN in uppercase" value={form.isin} onChange={event => update("isin", event.target.value.toUpperCase())} placeholder="UA4000231281"/></label>

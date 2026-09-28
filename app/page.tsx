@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import BondsTab from "./BondsTab";
+import CouponsTab from "./CouponsTab";
 import SignOutButton from "./SignOutButton";
 
 const tabs = ["Analytics", "Bonds", "Coupons", "Cashflow"] as const;
@@ -66,5 +67,5 @@ function SimpleTab({ tab }: { tab: Tab }) {
 
 export default function Home() {
   const [active, setActive] = useState<Tab>("Bonds");
-  return <div className="app-shell"><header className="topbar"><a className="brand" href="#"><span className="brand-mark"><span/></span><span>obl<span className="brand-dot">.</span>ig</span></a><nav className="main-nav" aria-label="Main navigation">{tabs.map((tab, i)=><button key={tab} onClick={()=>setActive(tab)} className={active === tab ? "nav-item active" : "nav-item"}><Icon name={["grid","layers","calendar","arrows"][i]}/>{tab}</button>)}</nav><div className="top-actions"><button className="search-button"><Icon name="search"/><span>Search</span><kbd>⌘ K</kbd></button><button className="notification"><Icon name="bell"/><i/></button><span className="top-divider"/><SignOutButton/></div></header><main className="main-content">{active === "Analytics" ? <Analytics/> : active === "Bonds" ? <BondsTab/> : <SimpleTab tab={active}/>}<footer className="footer"><span>© 2026 OBLIG</span><span><i/> All systems operational</span><span>Data refreshed a moment ago</span></footer></main></div>;
+  return <div className="app-shell"><header className="topbar"><a className="brand" href="#"><span className="brand-mark"><span/></span><span>obl<span className="brand-dot">.</span>ig</span></a><nav className="main-nav" aria-label="Main navigation">{tabs.map((tab, i)=><button key={tab} onClick={()=>setActive(tab)} className={active === tab ? "nav-item active" : "nav-item"}><Icon name={["grid","layers","calendar","arrows"][i]}/>{tab}</button>)}</nav><div className="top-actions"><button className="search-button"><Icon name="search"/><span>Search</span><kbd>⌘ K</kbd></button><button className="notification"><Icon name="bell"/><i/></button><span className="top-divider"/><SignOutButton/></div></header><main className="main-content">{active === "Analytics" ? <Analytics/> : active === "Bonds" ? <BondsTab/> : active === "Coupons" ? <CouponsTab/> : <SimpleTab tab={active}/>}<footer className="footer"><span>© 2026 OBLIG</span><span><i/> All systems operational</span><span>Data refreshed a moment ago</span></footer></main></div>;
 }

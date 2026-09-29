@@ -5,6 +5,27 @@ import { requireUserId } from "@/lib/require-user";
 export const runtime = "nodejs";
 const ttl = 3 * 60 * 60 * 1000;
 
+type LiveCoupon = { type: string; paymentDate: string };
+type LiveBond = Record<string, unknown> & { currency?: string; sellPrice?: number | null; coupons?: LiveCoupon[] };
+
+function prepareLivePrices(payload: unknown) {
+  if (!payload || typeof payload !== "object" || !("data" in payload) || !Array.isArray(payload.data)) return payload;
+  const bonds = payload.data.filter((bond): bond is LiveBond => {
+    if (!bond || typeof bond !== "object") return false;
+    const item = bond as LiveBond;
+    return item.currency === "UAH" && typeof item.sellPrice === "number" && Number.isFinite(item.sellPrice);
+  }).map(bond => ({
+    ...bond,
+    coupons: [...(Array.isArray(bond.coupons) ? bond.coupons : [])].sort((a, b) => {
+      const dateKey = (value: string) => value.split(".").reverse().join("-");
+      const dateOrder = dateKey(a.paymentDate).localeCompare(dateKey(b.paymentDate));
+      if (dateOrder) return dateOrder;
+      return a.type === "Погашення" ? 1 : b.type === "Погашення" ? -1 : 0;
+    }),
+  }));
+  return { ...payload, data: bonds };
+}
+
 async function fetchLivePrices() {
   const init = await fetch("https://next.privat24.ua/api/p24/init", {
     method: "POST",
@@ -27,7 +48,7 @@ async function fetchLivePrices() {
   if (!response.ok) throw new Error(`Privat24 live prices failed (${response.status})`);
   const data = await response.json();
   if (data?.status !== "success" || !Array.isArray(data.data)) throw new Error("Privat24 returned an invalid bond list");
-  return data;
+  return prepareLivePrices(data);
 }
 
 export async function GET() {
@@ -42,7 +63,7 @@ export async function GET() {
     stale = { payload: rows[0].payload, fetchedAt: rows[0].fetchedAt };
     if (Date.now() - new Date(stale.fetchedAt).getTime() < ttl) {
       await client.query("COMMIT");
-      return NextResponse.json({ data: stale.payload, fetchedAt: stale.fetchedAt, stale: false });
+      return NextResponse.json({ data: prepareLivePrices(stale.payload), fetchedAt: stale.fetchedAt, stale: false });
     }
 
     const data = await fetchLivePrices();
@@ -56,7 +77,7 @@ export async function GET() {
     await client.query("ROLLBACK").catch(() => {});
     console.error("Could not refresh live prices", error);
     if (stale && stale.payload && Object.keys(stale.payload as object).length) {
-      return NextResponse.json({ data: stale.payload, fetchedAt: stale.fetchedAt, stale: true });
+      return NextResponse.json({ data: prepareLivePrices(stale.payload), fetchedAt: stale.fetchedAt, stale: true });
     }
     return NextResponse.json({ error: "Could not load live bond prices from Privat24." }, { status: 503 });
   } finally {

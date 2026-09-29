@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useLayoutEffect, useState } from "react";
 import BondsTab from "./BondsTab";
 import CouponsTab from "./CouponsTab";
 import CashflowTab from "./CashflowTab";
@@ -69,5 +69,25 @@ function SimpleTab({ tab }: { tab: Tab }) {
 
 export default function Home() {
   const [active, setActive] = useState<Tab>("Bonds");
-  return <div className="app-shell"><header className="topbar"><a className="brand" href="#"><span className="brand-mark"><span/></span><span>obl<span className="brand-dot">.</span>ig</span></a><nav className="main-nav" aria-label="Main navigation">{tabs.map((tab, i)=><button key={tab} onClick={()=>setActive(tab)} className={active === tab ? "nav-item active" : "nav-item"}><Icon name={["grid","layers","calendar","arrows","search"][i]}/>{tab}</button>)}</nav><div className="top-actions"><button className="search-button"><Icon name="search"/><span>Search</span><kbd>⌘ K</kbd></button><button className="notification"><Icon name="bell"/><i/></button><span className="top-divider"/><SignOutButton/></div></header><main className="main-content">{active === "Analytics" ? <Analytics/> : active === "Bonds" ? <BondsTab/> : active === "Coupons" ? <CouponsTab/> : active === "Cashflow" ? <CashflowTab/> : <LivePricesTab/>}<footer className="footer"><span>© 2026 OBLIG</span><span><i/> All systems operational</span><span>Data refreshed a moment ago</span></footer></main></div>;
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [themeReady] = useState(true);
+  const [themeSaving, setThemeSaving] = useState(false);
+  const [themeError, setThemeError] = useState("");
+  useLayoutEffect(() => setTheme(document.documentElement.dataset.theme === "light" ? "light" : "dark"), []);
+  const toggleTheme = async () => {
+    const nextTheme = theme === "dark" ? "light" : "dark";
+    setThemeSaving(true);
+    setThemeError("");
+    try {
+      const response = await fetch("/api/config", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ theme: nextTheme }) });
+      if (!response.ok) throw new Error((await response.json()).error || "Could not save appearance preference");
+      setTheme(nextTheme);
+      document.documentElement.dataset.theme = nextTheme;
+    } catch (reason) {
+      setThemeError(reason instanceof Error ? reason.message : "Could not save appearance preference");
+    } finally {
+      setThemeSaving(false);
+    }
+  };
+  return <div className="app-shell"><header className="topbar"><a className="brand" href="#"><span className="brand-mark"><span/></span><span>obl<span className="brand-dot">.</span>ig</span></a><nav className="main-nav" aria-label="Main navigation">{tabs.map((tab, i)=><button key={tab} onClick={()=>setActive(tab)} className={active === tab ? "nav-item active" : "nav-item"}><Icon name={["grid","layers","calendar","arrows","search"][i]}/>{tab}</button>)}</nav><div className="top-actions"><button className="theme-toggle" onClick={toggleTheme} disabled={!themeReady || themeSaving} aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}>{themeSaving ? "Saving…" : theme === "dark" ? "☀ Light" : "☾ Dark"}</button>{themeError && <span className="theme-error" role="alert">{themeError}</span>}<span className="top-divider"/><SignOutButton/></div></header><main className="main-content">{active === "Analytics" ? <Analytics/> : active === "Bonds" ? <BondsTab/> : active === "Coupons" ? <CouponsTab/> : active === "Cashflow" ? <CashflowTab/> : <LivePricesTab/>}<footer className="footer"><span>© 2026 OBLIG</span><span><i/> All systems operational</span><span>Data refreshed a moment ago</span></footer></main></div>;
 }

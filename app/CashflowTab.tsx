@@ -79,12 +79,11 @@ export default function CashflowTab() {
     return date(a.maturity) - date(b.maturity);
   });
   const totals = months.reduce((sum, row) => ({ gross: sum.gross + row.gross, tax: sum.tax + row.tax, net: sum.net + row.net, maturity: sum.maturity + row.maturity, totalNet: sum.totalNet + row.totalNet, coupons: sum.coupons + row.coupons, maturities: sum.maturities + row.maturities }), { gross: 0, tax: 0, net: 0, maturity: 0, totalNet: 0, coupons: 0, maturities: 0 });
-  const heatColor = (value: number, values: number[]) => {
-    const positive = values.filter(item => item > 0);
-    const min = Math.min(...positive);
-    const max = Math.max(...positive);
-    const ratio = value > 0 && max > min ? Math.log(value / min) / Math.log(max / min) : 0;
-    return `rgb(${Math.round(244 - ratio * 112)}, ${Math.round(250 - ratio * 49)}, ${Math.round(246 - ratio * 89)})`;
+  const heatFill = (value: number, values: number[]) => {
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const percent = max > min ? ((value - min) / (max - min)) * 100 : value > 0 ? 100 : 0;
+    return `linear-gradient(90deg, var(--heat-fill) ${percent}%, transparent ${percent}%)`;
   };
 
   return <>
@@ -99,7 +98,7 @@ export default function CashflowTab() {
       {error ? <div className="bond-state" role="alert">{error}</div> : loading ? <div className="bond-state">Loading cashflow…</div> : !months.length ? <div className="bond-state">No cashflows for this period.</div> : <div className="bond-table-wrap"><table className="bond-table cashflow-table"><thead><tr><th>Month</th><th>Gross coupons</th><th>Tax</th><th>Net coupon income</th><th>Maturities</th><th>Total gross cashflow</th><th>Total net cashflow</th><th>Coupons</th><th>Maturities</th></tr></thead><tbody>
         <tr className="cashflow-total"><th>Total</th><th>{money(totals.gross)}</th><th>{money(totals.tax)}</th><th>{money(totals.net)}</th><th>{money(totals.maturity)}</th><th>{money(totals.gross + totals.maturity)}</th><th>{money(totals.totalNet)}</th><th>{totals.coupons}</th><th>{totals.maturities}</th></tr>
         {months.map(row => <Fragment key={row.month}><tr className={selectedMonth === row.month ? "cashflow-row selected" : "cashflow-row"} tabIndex={0} aria-expanded={expandedMonth === row.month} onClick={() => { setSelectedMonth(row.month); setExpandedMonth(expandedMonth === row.month ? null : row.month); }} onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setSelectedMonth(row.month); setExpandedMonth(expandedMonth === row.month ? null : row.month); } }}>
-          <td><strong>{new Intl.DateTimeFormat("en", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${row.month}-01T00:00:00Z`))}</strong></td><td>{money(row.gross)}</td><td>{money(row.tax)}</td><td style={{ background: heatColor(row.net, months.map(item => item.net)), color: "#10251b", fontWeight: 700 }}>{money(row.net)}</td><td>{money(row.maturity)}</td><td>{money(row.gross + row.maturity)}</td><td style={{ background: heatColor(row.totalNet, months.map(item => item.totalNet)), color: "#10251b", fontWeight: 700 }}><strong>{money(row.totalNet)}</strong></td><td>{row.coupons}</td><td>{row.maturities}</td>
+          <td><strong>{new Intl.DateTimeFormat("en", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${row.month}-01T00:00:00Z`))}</strong></td><td>{money(row.gross)}</td><td>{money(row.tax)}</td><td style={{ background: heatFill(row.net, months.map(item => item.net)), color: "var(--heat-text)", fontWeight: 700 }}>{money(row.net)}</td><td>{money(row.maturity)}</td><td>{money(row.gross + row.maturity)}</td><td style={{ background: heatFill(row.totalNet, months.map(item => item.totalNet)), color: "var(--heat-text)", fontWeight: 700 }}><strong>{money(row.totalNet)}</strong></td><td>{row.coupons}</td><td>{row.maturities}</td>
         </tr>{expandedMonth === row.month && <tr className="cashflow-expanded"><td colSpan={9}><div className="cashflow-expanded-content"><div className="panel-head"><div><h2>Live bonds with coupons <span>{selectedLiveBonds.length}</span></h2><p>{row.month} · sorted by maturity</p></div></div>{selectedLiveBonds.length ? <div className="bond-table-wrap"><table className="bond-table cashflow-live-table"><thead><tr><th>ISIN</th><th>Maturity</th><th>Yield</th><th>Price</th></tr></thead><tbody>{selectedLiveBonds.map(bond => <tr key={bond.isin}><td><strong>{bond.isin}</strong></td><td>{bond.maturity}</td><td>{bond.sellYield}%</td><td>{bond.sellPrice == null ? "—" : money(bond.sellPrice)}</td></tr>)}</tbody></table></div> : <div className="cashflow-empty">No available UAH bonds have coupon payments in this month.</div>}</div></td></tr>}</Fragment>)}
       </tbody></table></div>}
     </section>

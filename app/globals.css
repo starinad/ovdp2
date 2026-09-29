@@ -43,3 +43,5 @@
 :root[data-theme="light"] .pagination button:hover,:root[data-theme="light"] .bond-actions button:hover,:root[data-theme="light"] .modal-close:hover{background:#f4f7fb}:root[data-theme="light"] .cashflow-filter select{background:#fff;color:#53647b;border-color:#e8edf3}
 :root[data-theme="light"] .theme-toggle{background:#fff;color:#53647b;border-color:#e8edf3}:root[data-theme="light"] .theme-toggle:hover{background:#f4f7fb}
 .theme-toggle:disabled{opacity:.65;cursor:wait}.theme-error{color:#f08b93;font-size:10px}:root[data-theme="light"] .theme-error{color:#a34f4f}
+.cashflow-summary{grid-template-columns:repeat(3,1fr)}
+@media(max-width:600px){.cashflow-summary{grid-template-columns:1fr}}

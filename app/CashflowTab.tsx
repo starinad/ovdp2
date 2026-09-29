@@ -89,6 +89,11 @@ export default function CashflowTab() {
 
   return <>
     <div className="welcome-row"><div><div className="eyebrow">PORTFOLIO</div><h1>Cashflow <span>schedule.</span></h1><p className="subhead">Monthly coupon income and bond maturities.</p></div></div>
+    <section className="bond-summary cashflow-summary">
+      <article className="panel bond-summary-card"><span>Maturities</span><strong>{money(totals.maturity)}</strong><small>Total principal repayments</small></article>
+      <article className="panel bond-summary-card"><span>Net coupon income</span><strong>{money(totals.net)}</strong><small>After tax</small></article>
+      <article className="panel bond-summary-card"><span>Total net cashflow</span><strong>{money(totals.totalNet)}</strong><small>Coupons and maturities</small></article>
+    </section>
     <section className="panel cashflow-panel">
       <div className="bonds-toolbar cashflow-toolbar"><div><h2>Monthly cashflow</h2><p>Select a month to see matching live bonds</p></div><div className="bond-filters"><select aria-label="Cashflow period" value={mode} onChange={event => setMode(event.target.value as typeof mode)}><option value="ALL">All</option><option value="PAST">Past</option><option value="FUTURE">Future</option></select></div></div>
       {error ? <div className="bond-state" role="alert">{error}</div> : loading ? <div className="bond-state">Loading cashflow…</div> : !months.length ? <div className="bond-state">No cashflows for this period.</div> : <div className="bond-table-wrap"><table className="bond-table cashflow-table"><thead><tr><th>Month</th><th>Gross coupons</th><th>Tax</th><th>Net coupon income</th><th>Maturities</th><th>Total gross cashflow</th><th>Total net cashflow</th><th>Coupons</th><th>Maturities</th></tr></thead><tbody>

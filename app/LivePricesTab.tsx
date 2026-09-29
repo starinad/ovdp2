@@ -16,6 +16,7 @@ type LiveBond = {
 };
 
 const price = (value: number, currency: string) => new Intl.NumberFormat("uk-UA", { style: "currency", currency, maximumFractionDigits: 2 }).format(value);
+type SortKey = "maturity" | "sellPrice" | "sellYield";
 export default function LivePricesTab() {
   const [bonds, setBonds] = useState<LiveBond[]>([]);
   const [fetchedAt, setFetchedAt] = useState("");
@@ -23,6 +24,7 @@ export default function LivePricesTab() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [expandedIsin, setExpandedIsin] = useState<string | null>(null);
+  const [sort, setSort] = useState<{ key: SortKey; direction: 1 | -1 }>({ key: "maturity", direction: 1 });
 
   useEffect(() => {
     fetch("/api/live-prices").then(async response => {
@@ -34,12 +36,20 @@ export default function LivePricesTab() {
     }).catch(reason => setError(reason instanceof Error ? reason.message : "Could not load live prices")).finally(() => setLoading(false));
   }, []);
 
+  const sortedBonds = [...bonds].sort((a, b) => {
+    const value = (bond: LiveBond) => sort.key === "maturity"
+      ? new Date(bond.maturity.split(".").reverse().join("-")).getTime()
+      : bond[sort.key];
+    return (value(a) - value(b)) * sort.direction;
+  });
+  const sortBy = (key: SortKey) => setSort(current => ({ key, direction: current.key === key ? current.direction === 1 ? -1 : 1 : 1 }));
+
   return <>
     <div className="welcome-row"><div><div className="eyebrow">MARKET DATA</div><h1>Live <span>prices.</span></h1><p className="subhead">Bond prices and yields from Privat24.</p></div></div>
     <section className="panel bonds-panel">
       <div className="bonds-toolbar"><div><h2>Government bonds <span>{bonds.length}</span></h2><p>{fetchedAt ? `${stale ? "Cached snapshot · refresh failed · " : "Updated "}${new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short" }).format(new Date(fetchedAt))}` : "Prices refresh every 3 hours"}</p></div></div>
-      {error ? <div className="bond-state" role="alert">{error}</div> : loading ? <div className="bond-state">Loading live prices…</div> : !bonds.length ? <div className="bond-state">No UAH bond prices available.</div> : <div className="bond-table-wrap"><table className="bond-table"><thead><tr><th>ISIN</th><th>Type</th><th>Maturity</th><th>Term</th><th>Quotation date</th><th>Price</th><th>Yield</th></tr></thead><tbody>
-        {bonds.map(bond => <Fragment key={bond.isin}>
+      {error ? <div className="bond-state" role="alert">{error}</div> : loading ? <div className="bond-state">Loading live prices…</div> : !bonds.length ? <div className="bond-state">No UAH bond prices available.</div> : <div className="bond-table-wrap"><table className="bond-table"><thead><tr><th>ISIN</th><th>Type</th><th><button className="table-sort" onClick={() => sortBy("maturity")}>Maturity {sort.key === "maturity" ? sort.direction === 1 ? "↑" : "↓" : "↕"}</button></th><th>Term</th><th>Quotation date</th><th><button className="table-sort" onClick={() => sortBy("sellPrice")}>Price {sort.key === "sellPrice" ? sort.direction === 1 ? "↑" : "↓" : "↕"}</button></th><th><button className="table-sort" onClick={() => sortBy("sellYield")}>Yield {sort.key === "sellYield" ? sort.direction === 1 ? "↑" : "↓" : "↕"}</button></th></tr></thead><tbody>
+        {sortedBonds.map(bond => <Fragment key={bond.isin}>
           <tr className="live-bond-row" tabIndex={0} role="button" aria-expanded={expandedIsin === bond.isin} aria-controls={`coupons-${bond.isin}`} onClick={() => setExpandedIsin(expandedIsin === bond.isin ? null : bond.isin)} onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setExpandedIsin(expandedIsin === bond.isin ? null : bond.isin); } }}>
             <td><strong>{bond.isin}</strong></td><td>{bond.military ? "Military" : "Government"}</td><td>{bond.maturity}</td><td>{bond.termMaturity}</td><td>{bond.quotationDate}</td><td>{price(bond.sellPrice, bond.currency)}</td><td>{bond.sellYield}%</td>
           </tr>

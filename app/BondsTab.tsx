@@ -6,7 +6,7 @@ import { Bond, BondInput, bondStatuses, couponFrequencies, currencies, dayCountC
 const blankBond = (): BondInput => ({
   isin: "", name: "", status: "ACTIVE", faceValue: "1000", quantity: "1", purchasePrice: "1000",
   currency: "UAH", interestRate: "", taxRate: "0", purchaseDate: "", maturityDate: "", firstCouponDate: "",
-  couponFrequency: "SEMIANNUAL", dayCountConvention: "ACT/ACT", fixedCoupon: "0",
+  couponFrequency: "SEMIANNUAL", dayCountConvention: "ACT/365", fixedCoupon: "0",
 });
 
 const label = (value: string) => value.split("_").map(part => part[0] + part.slice(1).toLowerCase()).join(" ");

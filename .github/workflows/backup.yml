@@ -1,0 +1,90 @@
+name: Supabase Database Backup
+
+on:
+  # Every day at 01:00 UTC
+  schedule:
+    - cron: "0 1 * * *"
+
+  # Allows manual execution from GitHub Actions
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+
+      B2_KEY_ID: ${{ secrets.B2_KEY_ID }}
+      B2_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+      B2_BUCKET: ${{ secrets.B2_BUCKET }}
+      B2_ENDPOINT: ${{ secrets.B2_ENDPOINT }}
+
+    steps:
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Create backup directory
+        run: |
+          mkdir -p backup
+
+      - name: Backup roles
+        run: |
+          supabase db dump \
+            --db-url "$SUPABASE_DB_URL" \
+            -f backup/roles.sql \
+            --role-only
+
+      - name: Backup schema
+        run: |
+          supabase db dump \
+            --db-url "$SUPABASE_DB_URL" \
+            -f backup/schema.sql
+
+      - name: Backup data
+        run: |
+          supabase db dump \
+            --db-url "$SUPABASE_DB_URL" \
+            -f backup/data.sql \
+            --data-only \
+            --use-copy
+
+      - name: Show backup size
+        run: |
+          du -h backup/*
+          du -sh backup
+
+      - name: Compress backup
+        run: |
+          DATE=$(date -u +"%Y-%m-%d_%H-%M-%S")
+
+          tar -czf "supabase-backup-${DATE}.tar.gz" backup/
+
+          echo "BACKUP_FILE=supabase-backup-${DATE}.tar.gz" >> "$GITHUB_ENV"
+
+          echo "Backup created:"
+          ls -lh "$BACKUP_FILE"
+
+      - name: Install AWS CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y awscli
+
+      - name: Upload backup to Backblaze B2
+        run: |
+          aws configure set aws_access_key_id "$B2_KEY_ID"
+          aws configure set aws_secret_access_key "$B2_APPLICATION_KEY"
+          aws configure set default.region us-east-1
+
+          aws s3 cp \
+            "$BACKUP_FILE" \
+            "s3://${B2_BUCKET}/postgres/${BACKUP_FILE}" \
+            --endpoint-url "$B2_ENDPOINT"
+
+      - name: Verify upload
+        run: |
+          aws s3 ls \
+            "s3://${B2_BUCKET}/postgres/${BACKUP_FILE}" \
+            --endpoint-url "$B2_ENDPOINT"

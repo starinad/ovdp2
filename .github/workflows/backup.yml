@@ -22,7 +22,7 @@ jobs:
 
     steps:
       - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
+        uses: supabase/setup-cli@v3
         with:
           version: latest
 
@@ -59,10 +59,11 @@ jobs:
       - name: Compress backup
         run: |
           DATE=$(date -u +"%Y-%m-%d_%H-%M-%S")
+          BACKUP_FILE="supabase-backup-${DATE}.tar.gz"
 
-          tar -czf "supabase-backup-${DATE}.tar.gz" backup/
+          tar -czf "$BACKUP_FILE" backup/
 
-          echo "BACKUP_FILE=supabase-backup-${DATE}.tar.gz" >> "$GITHUB_ENV"
+          echo "BACKUP_FILE=$BACKUP_FILE" >> "$GITHUB_ENV"
 
           echo "Backup created:"
           ls -lh "$BACKUP_FILE"

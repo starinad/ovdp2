@@ -1,11 +1,11 @@
 name: Supabase Database Backup
 
 on:
-  # Every day at 01:00 UTC
   schedule:
+    # Every day at 01:00 UTC
     - cron: "0 1 * * *"
 
-  # Allows manual execution from GitHub Actions
+  # Allow manual execution from GitHub Actions
   workflow_dispatch:
 
 jobs:
@@ -14,11 +14,6 @@ jobs:
 
     env:
       SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-
-      B2_KEY_ID: ${{ secrets.B2_KEY_ID }}
-      B2_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
-      B2_BUCKET: ${{ secrets.B2_BUCKET }}
-      B2_ENDPOINT: ${{ secrets.B2_ENDPOINT }}
 
     steps:
       - name: Setup Supabase CLI
@@ -68,24 +63,18 @@ jobs:
           echo "Backup created:"
           ls -lh "$BACKUP_FILE"
 
-      - name: Install AWS CLI
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y awscli
-
       - name: Upload backup to Backblaze B2
-        run: |
-          aws configure set aws_access_key_id "$B2_KEY_ID"
-          aws configure set aws_secret_access_key "$B2_APPLICATION_KEY"
-          aws configure set default.region us-east-1
+        uses: backblaze-labs/b2-action@v1
+        with:
+          action: upload
+          application-key-id: ${{ secrets.B2_KEY_ID }}
+          application-key: ${{ secrets.B2_APPLICATION_KEY }}
+          bucket: ${{ secrets.B2_BUCKET }}
+          source: ./${{ env.BACKUP_FILE }}
+          destination: postgres/${{ env.BACKUP_FILE }}
+          content-type: application/gzip
 
-          aws s3 cp \
-            "$BACKUP_FILE" \
-            "s3://${B2_BUCKET}/postgres/${BACKUP_FILE}" \
-            --endpoint-url "$B2_ENDPOINT"
-
-      - name: Verify upload
+      - name: Backup completed
         run: |
-          aws s3 ls \
-            "s3://${B2_BUCKET}/postgres/${BACKUP_FILE}" \
-            --endpoint-url "$B2_ENDPOINT"
+          echo "Backup uploaded successfully:"
+          echo "postgres/${BACKUP_FILE}"

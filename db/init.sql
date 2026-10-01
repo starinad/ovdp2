@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS bonds (
   quantity INTEGER NOT NULL CHECK (quantity > 0),
   purchase_price NUMERIC(18, 6) NOT NULL CHECK (purchase_price >= 0),
   currency CHAR(3) NOT NULL CHECK (currency IN ('UAH', 'USD', 'EUR')),
+  usd_uah_rate NUMERIC(18, 6) NOT NULL DEFAULT 0 CHECK (usd_uah_rate >= 0),
+  eur_uah_rate NUMERIC(18, 6) NOT NULL DEFAULT 0 CHECK (eur_uah_rate >= 0),
   interest_rate NUMERIC(9, 6) NOT NULL CHECK (interest_rate >= 0),
   tax_rate NUMERIC(9, 6) NOT NULL DEFAULT 0 CHECK (tax_rate BETWEEN 0 AND 100),
   purchase_date DATE NOT NULL,

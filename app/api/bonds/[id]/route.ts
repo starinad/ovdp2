@@ -7,7 +7,8 @@ import type { PoolClient } from "pg";
 
 export const runtime = "nodejs";
 const columns = `id, isin, name, status, face_value AS "faceValue", quantity,
-  purchase_price AS "purchasePrice", currency, interest_rate AS "interestRate", tax_rate AS "taxRate",
+  purchase_price AS "purchasePrice", currency, usd_uah_rate AS "usdUahRate", eur_uah_rate AS "eurUahRate",
+  interest_rate AS "interestRate", tax_rate AS "taxRate",
   purchase_date AS "purchaseDate", maturity_date AS "maturityDate",
   first_coupon_date AS "firstCouponDate", coupon_frequency AS "couponFrequency",
   day_count_convention AS "dayCountConvention", fixed_coupon AS "fixedCoupon"`;
@@ -25,9 +26,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   try {
     client = await getPool().connect();
     await client.query("BEGIN");
-    const values = [bond.isin, bond.name, bond.status, bond.faceValue, bond.quantity, bond.purchasePrice, bond.currency, bond.interestRate, bond.taxRate, bond.purchaseDate, bond.maturityDate, bond.firstCouponDate, bond.couponFrequency, bond.dayCountConvention, bond.fixedCoupon, id, ownerId];
+    const values = [bond.isin, bond.name, bond.status, bond.faceValue, bond.quantity, bond.purchasePrice, bond.currency, bond.interestRate, bond.taxRate, bond.purchaseDate, bond.maturityDate, bond.firstCouponDate, bond.couponFrequency, bond.dayCountConvention, bond.fixedCoupon, bond.usdUahRate, bond.eurUahRate, id, ownerId];
     const { rows } = await client.query(
-      `UPDATE bonds SET isin=$1, name=$2, status=$3, face_value=$4, quantity=$5, purchase_price=$6, currency=$7, interest_rate=$8, tax_rate=$9, purchase_date=$10, maturity_date=$11, first_coupon_date=$12, coupon_frequency=$13, day_count_convention=$14, fixed_coupon=$15 WHERE id=$16 AND owner_id=$17 RETURNING ${columns}`,
+      `UPDATE bonds SET isin=$1, name=$2, status=$3, face_value=$4, quantity=$5, purchase_price=$6, currency=$7, interest_rate=$8, tax_rate=$9, purchase_date=$10, maturity_date=$11, first_coupon_date=$12, coupon_frequency=$13, day_count_convention=$14, fixed_coupon=$15, usd_uah_rate=$16, eur_uah_rate=$17 WHERE id=$18 AND owner_id=$19 RETURNING ${columns}`,
       values,
     );
     if (!rows.length) {

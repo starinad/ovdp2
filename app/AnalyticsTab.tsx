@@ -119,57 +119,6 @@ export default function AnalyticsTab() {
   const today = new Date().toLocaleDateString("sv-SE");
   const incomeBondIds = new Set(bonds.filter(bond => bond.status !== "SOLD").map(bond => bond.id));
   const receivedCoupons = coupons.filter(coupon => incomeBondIds.has(coupon.bondId) && coupon.status !== "CANCELLED" && coupon.paymentDate.slice(0, 10) <= today);
-  const incomeBonds = bonds.filter(bond => bond.status !== "SOLD");
-  const reinvestmentEvents = incomeBonds.map(bond => {
-    const purchaseFx = ratesOnDate(historicalRates, bond.purchaseDate.slice(0, 10), liveFx);
-    return { date: bond.purchaseDate.slice(0, 10), amount: -toBaseCurrency(Number(bond.purchasePrice) * Number(bond.quantity), bond.currency, "UAH", purchaseFx) };
-  });
-  for (const bond of incomeBonds.filter(bond => bond.status !== "ACTIVE" && bond.maturityDate.slice(0, 10) <= today)) {
-    const maturityFx = ratesOnDate(historicalRates, bond.maturityDate.slice(0, 10), liveFx);
-    reinvestmentEvents.push({ date: bond.maturityDate.slice(0, 10), amount: toBaseCurrency(Number(bond.faceValue) * Number(bond.quantity), bond.currency, "UAH", maturityFx) });
-  }
-  const couponsInCurrency = { USD: 0, EUR: 0 };
-  for (const coupon of receivedCoupons) {
-    const paymentFx = ratesOnDate(historicalRates, coupon.paymentDate.slice(0, 10), liveFx);
-    const amount = Number(coupon.netAmount);
-    reinvestmentEvents.push({ date: coupon.paymentDate.slice(0, 10), amount: toBaseCurrency(amount, coupon.currency as Currency, "UAH", paymentFx) });
-    couponsInCurrency.USD += toBaseCurrency(amount, coupon.currency as Currency, "USD", paymentFx);
-    couponsInCurrency.EUR += toBaseCurrency(amount, coupon.currency as Currency, "EUR", paymentFx);
-  }
-  reinvestmentEvents.sort((a, b) => a.date.localeCompare(b.date) || b.amount - a.amount);
-  let reinvestedCashUah = 0;
-  let externalInvestmentUah = 0;
-  const currencyUnitsBought = { USD: 0, EUR: 0 };
-  for (const event of reinvestmentEvents) {
-    if (event.amount > 0) {
-      reinvestedCashUah += event.amount;
-      continue;
-    }
-    const purchaseCost = -event.amount;
-    const reinvestedAmount = Math.min(reinvestedCashUah, purchaseCost);
-    reinvestedCashUah -= reinvestedAmount;
-    const externalAmount = purchaseCost - reinvestedAmount;
-    externalInvestmentUah += externalAmount;
-    const purchaseFx = ratesOnDate(historicalRates, event.date, liveFx);
-    currencyUnitsBought.USD += externalAmount / purchaseFx.USD;
-    currencyUnitsBought.EUR += externalAmount / purchaseFx.EUR;
-  }
-  const currentBondValueUah = positions.reduce((sum, bond) => sum + toBaseCurrency(bond.principal, bond.currency, "UAH", liveFx), 0);
-  const currencyComparison = (["USD", "EUR"] as const).map(currency => {
-    const unitsBought = currencyUnitsBought[currency];
-    const currencyValueUah = unitsBought * liveFx[currency];
-    return {
-      currency,
-      unitsBought,
-      currencyValueUah,
-      currencyReturn: externalInvestmentUah ? (currencyValueUah - externalInvestmentUah) / externalInvestmentUah : null,
-      couponsInCurrency: couponsInCurrency[currency],
-      bondValue: currentBondValueUah / liveFx[currency],
-      bondReturn: externalInvestmentUah ? (currentBondValueUah - externalInvestmentUah) / externalInvestmentUah : null,
-      profit: (currentBondValueUah - currencyValueUah) / liveFx[currency],
-      profitPercent: externalInvestmentUah ? (currentBondValueUah - currencyValueUah) / externalInvestmentUah : null,
-    };
-  });
   const equivalents = baseCurrencies.map(currency => ({
     currency,
     amount: positions.reduce((sum, bond) => sum + toBaseCurrency(bond.principal, bond.currency, currency, liveFx), 0),
@@ -255,7 +204,6 @@ export default function AnalyticsTab() {
         <article className="stat-card"><div className="stat-top"><span>Total net coupon income received · UAH</span><span className="stat-icon">₴</span></div><div className="stat-value">{money(uahMetrics.receivedIncome)}</div><div className="stat-foot"><span>Past scheduled dates; actual receipt is not tracked</span></div></article>
       </section>
       <section className="stats fx-equivalents"><article className="stat-card"><div className="stat-top"><span>Active face value · UAH</span><span className="stat-icon">₴</span></div><div className="stat-value">{money(equivalents[0].amount)}</div><div className="stat-foot"><span>Converted at live NBU rates</span></div></article>{equivalents.slice(1).map(item => <article className="stat-card" key={item.currency}><div className="stat-top"><span>UAH equivalent · {item.currency}</span><span className="stat-icon">{item.currency === "USD" ? "$" : "€"}</span></div><div className="stat-value">{money(item.amount, item.currency)}</div><div className="stat-foot"><span>Active bond face value</span></div></article>)}</section>
-      <article className="panel analytics-fx-panel currency-comparison"><div className="panel-head"><div><h2>Currency vs. bond return</h2><p>How holding USD or EUR compares with holding bonds</p></div></div><div className="fx-breakdown"><div className="fx-breakdown-head"><span>Currency</span><span>Bought and held</span><span>Currency P/L</span><span>Coupons earned*</span><span>Bond value today</span><span>Bond P/L</span><span>Profit<br/>(bond − currency)</span><span>Profit %<br/>(difference)</span></div>{currencyComparison.map(item => <div className="fx-breakdown-row" key={item.currency}><strong>{item.currency}</strong><span>{preciseCurrency(item.unitsBought, item.currency)}<small className="comparison-subvalue">{preciseMoney(item.currencyValueUah)} today</small></span><strong className={item.currencyReturn === null ? "" : item.currencyReturn >= 0 ? "positive" : "negative"}>{percent(item.currencyReturn)}</strong><span>{preciseCurrency(item.couponsInCurrency, item.currency)}</span><span>{preciseCurrency(item.bondValue, item.currency)}</span><strong className={item.bondReturn === null ? "" : item.bondReturn >= 0 ? "positive" : "negative"}>{percent(item.bondReturn)}</strong><strong className={item.profit >= 0 ? "positive" : "negative"}>{preciseCurrency(item.profit, item.currency)}</strong><strong className={item.profitPercent === null ? "" : item.profitPercent >= 0 ? "positive" : "negative"}>{percent(item.profitPercent)}</strong></div>)}</div><p className="fx-note">Profit compares bond P/L with currency P/L: bond value today minus the value of the bought-and-held currency, shown in USD/EUR. Profit % is the difference between Bond P/L and Currency P/L in percentage points. P/L uses external UAH contributions; prior coupons and matured principal fund later purchases instead of being counted twice. Bond value is active face value only. Sold bonds are excluded; coupon receipt is not tracked.</p></article>
       <section className="analytics-fx-grid">
         <article className="panel analytics-fx-panel"><div className="panel-head"><div><h2>Capital gain/loss by currency</h2><p>Active bond face value basis · amounts shown in each row’s currency</p></div></div><div className="fx-breakdown"><div className="fx-breakdown-head"><span>View in</span><span>Bond change</span><span>FX impact</span><span>Coupons</span><span>Received</span><span>Profit*</span></div>{capitalByCurrency.map(item => <div className="fx-breakdown-row" key={item.currency}><strong>{item.currency}</strong><span>{preciseCurrency(item.bondGain, item.currency)}</span><span>{preciseCurrency(item.fxImpact, item.currency)}</span><span>{item.couponCount}</span><span>{preciseCurrency(item.couponIncome, item.currency)}</span><strong className={item.profit >= 0 ? "positive" : "negative"}>{preciseCurrency(item.profit, item.currency)}</strong></div>)}</div><p className="fx-note">* Profit = bond change + FX impact + coupons received. Coupon count includes non-cancelled coupons dated through today for active, matured, and redeemed bonds; sold bonds are excluded. Actual receipt isn’t tracked. FX conversions use NBU rates on or before purchase/payment dates, then live rates if history is unavailable.</p></article>
         {hasCurrencyMix && <article className="panel analytics-fx-panel"><div className="panel-head"><div><h2>Currency exposure</h2><p>Active principal at live NBU rates</p></div></div><div className="fx-exposure-list">{activeExposure.map(item => <div className="fx-exposure-row" key={item.currency}><div className="fx-exposure-label"><strong>{item.currency}</strong><span>{money(item.nativeAmount, item.currency)} · {money(item.amount)} · {percent(item.share)}</span></div><div className="coupon-income-track"><i style={{ width: `${item.share * 100}%` }}/></div></div>)}</div></article>}

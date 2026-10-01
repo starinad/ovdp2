@@ -8,7 +8,7 @@ import type { PoolClient } from "pg";
 export const runtime = "nodejs";
 
 const columns = `id, isin, name, status, face_value AS "faceValue", quantity,
-  purchase_price AS "purchasePrice", currency, usd_uah_rate AS "usdUahRate", eur_uah_rate AS "eurUahRate",
+  purchase_price AS "purchasePrice", currency,
   interest_rate AS "interestRate", tax_rate AS "taxRate",
   purchase_date AS "purchaseDate", maturity_date AS "maturityDate",
   first_coupon_date AS "firstCouponDate", coupon_frequency AS "couponFrequency",
@@ -36,10 +36,10 @@ export async function POST(request: Request) {
   try {
     client = await getPool().connect();
     await client.query("BEGIN");
-    const values = [ownerId, bond.isin, bond.name, bond.status, bond.faceValue, bond.quantity, bond.purchasePrice, bond.currency, bond.interestRate, bond.taxRate, bond.purchaseDate, bond.maturityDate, bond.firstCouponDate, bond.couponFrequency, bond.dayCountConvention, bond.fixedCoupon, bond.usdUahRate, bond.eurUahRate];
+    const values = [ownerId, bond.isin, bond.name, bond.status, bond.faceValue, bond.quantity, bond.purchasePrice, bond.currency, bond.interestRate, bond.taxRate, bond.purchaseDate, bond.maturityDate, bond.firstCouponDate, bond.couponFrequency, bond.dayCountConvention, bond.fixedCoupon];
     const { rows } = await client.query(
-      `INSERT INTO bonds (owner_id, isin, name, status, face_value, quantity, purchase_price, currency, interest_rate, tax_rate, purchase_date, maturity_date, first_coupon_date, coupon_frequency, day_count_convention, fixed_coupon, usd_uah_rate, eur_uah_rate)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) RETURNING ${columns}`,
+      `INSERT INTO bonds (owner_id, isin, name, status, face_value, quantity, purchase_price, currency, interest_rate, tax_rate, purchase_date, maturity_date, first_coupon_date, coupon_frequency, day_count_convention, fixed_coupon)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING ${columns}`,
       values,
     );
     await replaceCouponSchedule(client, rows[0].id, bond);

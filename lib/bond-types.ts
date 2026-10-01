@@ -11,8 +11,6 @@ export type BondInput = {
   quantity: string;
   purchasePrice: string;
   currency: typeof currencies[number];
-  usdUahRate: string;
-  eurUahRate: string;
   interestRate: string;
   taxRate: string;
   purchaseDate: string;
@@ -39,7 +37,6 @@ export function validateBond(value: unknown): value is BondInput {
     && text("name", 120) && bondStatuses.includes(bond.status as typeof bondStatuses[number])
     && decimal("faceValue") && /^\d+$/.test(String(bond.quantity)) && Number(bond.quantity) > 0 && Number(bond.quantity) <= 2147483647
     && decimal("purchasePrice", true) && currencies.includes(bond.currency as typeof currencies[number])
-    && decimal("usdUahRate", true) && decimal("eurUahRate", true)
     && decimal("interestRate", true, 3) && decimal("taxRate", true, 3) && Number(bond.taxRate) <= 100 && date("purchaseDate") && date("maturityDate") && date("firstCouponDate")
     && (bond.maturityDate as string) >= (bond.purchaseDate as string) && (bond.firstCouponDate as string) <= (bond.maturityDate as string)
     && couponFrequencies.includes(bond.couponFrequency as typeof couponFrequencies[number])

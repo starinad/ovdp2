@@ -9,7 +9,7 @@ export async function GET() {
   if (!ownerId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const { rows } = await getPool().query(
-      `SELECT c.id, b.name AS "bondName", b.isin, b.currency,
+      `SELECT c.id, b.id AS "bondId", b.name AS "bondName", b.isin, b.currency,
         c.payment_date AS "paymentDate", c.gross_amount AS "grossAmount",
         c.tax_amount AS "taxAmount", c.net_amount AS "netAmount", c.status
        FROM coupons c JOIN bonds b ON b.id = c.bond_id

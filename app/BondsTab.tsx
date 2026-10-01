@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { SubmitEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { Bond, BondInput, bondStatuses, couponFrequencies, currencies, dayCountConventions } from "@/lib/bond-types";
 
 const blankBond = (): BondInput => ({
@@ -54,7 +54,7 @@ export default function BondsTab() {
     setForm(bond ? { ...bond, faceValue: String(bond.faceValue), quantity: String(bond.quantity), purchasePrice: String(bond.purchasePrice), interestRate: String(bond.interestRate), purchaseDate: bond.purchaseDate.slice(0, 10), maturityDate: bond.maturityDate.slice(0, 10), firstCouponDate: bond.firstCouponDate.slice(0, 10) } : blankBond());
   }
 
-  async function save(event: FormEvent<HTMLFormElement>) {
+  async function save(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!form) return;
     setSaving(true);

@@ -56,3 +56,5 @@
 .analytics-stats .stat-card,.analytics-extra-stats .stat-card{height:132px}
 .quantity-field{display:flex;align-items:center;gap:8px;color:#98a4b2;font-size:11px}.quantity-field input{width:72px;height:32px;padding:0 8px;border:1px solid #e8edf3;border-radius:6px;background:#fff;color:#53647b;font:500 12px 'DM Sans'}:root:not([data-theme="light"]) .quantity-field input{background:#202d3e;color:#d5dfed;border-color:#35445a}
 :root[data-theme="light"] .bond-table td.loss-value{color:#c0394b}:root:not([data-theme="light"]) .bond-table td.loss-value{color:#ff7b86}:root[data-theme="light"] .bond-table td.profit-value{color:#198563}:root:not([data-theme="light"]) .bond-table td.profit-value{color:#50c49a}
+.exchange-rates{display:flex;gap:12px;white-space:nowrap;color:var(--muted);font-size:12px}.exchange-rates strong{color:var(--ink);font-weight:700}
+@media(max-width:760px){.exchange-rates{gap:8px;font-size:11px}}

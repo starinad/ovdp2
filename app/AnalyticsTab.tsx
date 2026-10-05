@@ -15,8 +15,6 @@ const preciseCurrency = (value: number, currency: Currency) => new Intl.NumberFo
 const preciseMoney = (value: number) => preciseCurrency(value, "UAH");
 const percent = (value: number | null) => value === null ? "—" : new Intl.NumberFormat("en", { style: "percent", maximumFractionDigits: 2 }).format(value);
 const date = (value: string) => new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(`${value.slice(0, 10)}T00:00:00Z`));
-const colors = ["#3477e9", "#67a2f0", "#89d1db", "#c4d9ef", "#9b8bf4", "#edaa62"];
-
 function toBaseCurrency(value: number, from: Currency, to: Currency, rates: FxRates) {
   const uahValue = from === "UAH" ? value : value * rates[from];
   return to === "UAH" ? uahValue : uahValue / rates[to];

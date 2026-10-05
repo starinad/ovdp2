@@ -6,7 +6,7 @@ type Currency = "UAH" | "USD" | "EUR";
 type FxRates = Record<Exclude<Currency, "UAH">, number>;
 type ExchangeRates = { USD: { rate: number }; EUR: { rate: number } };
 type HistoricalRates = Record<Exclude<Currency, "UAH">, { date: string; rate: number }[]>;
-type Bond = { id: string; isin: string; name: string; status: string; faceValue: number; quantity: number; purchasePrice: number; purchaseDate: string; currency: Currency; interestRate: number; maturityDate: string };
+type Bond = { id: string; isin: string; name: string; status: string; faceValue: number; quantity: number; purchasePrice: number; purchaseDate: string; currency: Currency; interestRate: number; taxRate: number; maturityDate: string };
 type Coupon = { id: string; bondId: string; bondName: string; isin: string; currency: string; paymentDate: string; netAmount: number; status: string };
 type Position = Bond & { invested: number; principal: number; monthsToMaturity: number };
 type CashFlow = { date: string; amount: number };
@@ -66,30 +66,40 @@ function CashflowChart({ coupons, rates }: { coupons: Coupon[]; rates: FxRates }
   return <article className="panel analytics-chart-panel"><div className="panel-head"><div><h2>Coupon income equivalent · UAH</h2><p>All scheduled currencies converted at live NBU rates</p></div><div className="segmented" aria-label="Forecast length">{[3, 6, 12].map(n => <button key={n} className={range === n ? "selected" : ""} aria-pressed={range === n} onClick={() => setRange(n)}>{n}M</button>)}</div></div><div className="coupon-income-list">{months.map(month => <div className="coupon-income-row" key={month.key}><div className="coupon-income-month"><strong>{month.label}</strong><span>{month.payments.length} {month.payments.length === 1 ? "payment" : "payments"}</span></div><div className="coupon-income-track" role="progressbar" aria-label={month.label + " scheduled coupon income"} aria-valuemin={0} aria-valuemax={max} aria-valuenow={month.amount}><i style={{ width: month.amount / max * 100 + "%" }}/></div><strong className="coupon-income-amount">{preciseMoney(month.amount)}</strong></div>)}</div><div className="analytics-chart-total"><span>{"Scheduled total · next " + range + " months"}</span><strong>{preciseMoney(months.reduce((sum, month) => sum + month.amount, 0))}</strong></div></article>;
 }
 
-function CurrencyScenarioChart({ currentUah, projectedUah, rate, years }: { currentUah: number; projectedUah: number; rate: number; years: number }) {
+function CurrencyScenarioChart({ currentUah, projectedUah, futureCouponsUah, reinvestedCouponsUah, reinvestmentRate, rate, years }: { currentUah: number; projectedUah: number; futureCouponsUah: number; reinvestedCouponsUah: number; reinvestmentRate: number; rate: number; years: number }) {
   const [selectedChange, setSelectedChange] = useState(20);
   const usdSaved = currentUah / rate;
-  const scenarios = Array.from({ length: 11 }, (_, i) => ({ change: i * 10, amount: usdSaved * rate * (1 + i / 10) }));
-  const selectedUsdUah = usdSaved * rate * (1 + selectedChange / 100);
-  const difference = projectedUah - selectedUsdUah;
-  const max = Math.max(projectedUah, ...scenarios.map(item => item.amount), 1);
+  const scenarios = Array.from({ length: 11 }, (_, i) => {
+    const change = i * 10;
+    const futureRate = rate * (1 + change / 100);
+    const usdPrincipal = usdSaved * futureRate;
+    const uahPrincipalUsdCoupons = currentUah + futureCouponsUah / rate * futureRate;
+    return { change, usdPrincipal, uahPrincipalUsdCoupons };
+  });
+  const selectedFutureRate = rate * (1 + selectedChange / 100);
+  const selectedUsdPrincipal = usdSaved * selectedFutureRate;
+  const selectedUahPrincipalUsdCoupons = currentUah + futureCouponsUah / rate * selectedFutureRate;
+  const max = Math.max(projectedUah, ...scenarios.flatMap(item => [item.usdPrincipal, item.uahPrincipalUsdCoupons]), 1);
   const y = (amount: number) => 190 - amount / max * 160;
   const x = (change: number) => 54 + change * 5.8;
-  const breakEven = currentUah ? (projectedUah / currentUah - 1) * 100 : null;
+  const principalBreakEven = currentUah ? (projectedUah / currentUah - 1) * 100 : null;
+  const usdCasesBreakEven = currentUah > futureCouponsUah ? futureCouponsUah / (currentUah - futureCouponsUah) * 100 : null;
+  const reinvestmentVsUsdCouponsBreakEven = futureCouponsUah ? (reinvestedCouponsUah / futureCouponsUah - 1) * 100 : null;
   return <article className="panel analytics-fx-panel fx-scenario-panel">
-    <div className="panel-head"><div><h2>Keep UAH bonds or convert to USD?</h2><p>USD savings converted back to UAH under different exchange rate changes over {years} {years === 1 ? "year" : "years"}</p></div></div>
-    <div className="fx-scenario-summary"><span>Current UAH principal <strong>{preciseMoney(currentUah)}</strong></span><span>Projected bonds + coupons <strong>{preciseMoney(projectedUah)}</strong></span><span>USD/UAH today <strong>₴{rate.toFixed(2)}</strong></span></div>
+    <div className="panel-head"><div><h2>Keep UAH bonds or convert to USD?</h2><p>Portfolio outcomes shown in UAH at maturity, under different USD/UAH changes over {years} {years === 1 ? "year" : "years"}</p></div></div>
+    <div className="fx-scenario-summary"><span>Current UAH principal <strong>{preciseMoney(currentUah)}</strong></span><span>Scheduled net coupons <strong>{preciseMoney(futureCouponsUah)}</strong></span><span>UAH reinvestment rate <strong>{percent(reinvestmentRate)}</strong></span><span>USD/UAH today <strong>₴{rate.toFixed(2)}</strong></span></div>
     <div className="fx-scenario-control"><label htmlFor="fx-scenario-change">If USD/UAH changes by <strong>+{selectedChange}%</strong> <span>(₴{(rate * (1 + selectedChange / 100)).toFixed(2)} per USD)</span></label><input id="fx-scenario-change" type="range" min="0" max="100" step="1" value={selectedChange} onChange={event => setSelectedChange(Number(event.target.value))}/></div>
-    <div className="fx-scenario-results"><div><span>Keep the bonds</span><strong>{preciseMoney(projectedUah)}</strong></div><div><span>Convert to USD, then back</span><strong>{preciseMoney(selectedUsdUah)}</strong></div><div className={difference >= 0 ? "positive" : "negative"}><span>{difference >= 0 ? "Bonds ahead" : "USD savings ahead"}</span><strong>{preciseMoney(Math.abs(difference))}</strong></div></div>
-    <div className="fx-scenario-graph"><svg viewBox="0 0 650 235" role="img" aria-label="Projected UAH value of USD savings by exchange rate change, compared with UAH bonds and coupons">
+    <div className="fx-scenario-results"><div><span>UAH principal + reinvested coupons</span><strong>{preciseMoney(projectedUah)}</strong><small>Coupons grow to {preciseMoney(reinvestedCouponsUah)}</small></div><div><span>USD principal value in UAH</span><strong>{preciseMoney(selectedUsdPrincipal)}</strong></div><div><span>UAH principal + USD coupon value</span><strong>{preciseMoney(selectedUahPrincipalUsdCoupons)}</strong></div></div>
+    <div className="fx-scenario-graph"><svg viewBox="0 0 650 235" role="img" aria-label="Projected UAH value of holding bonds or converting bond principal and coupons to USD by exchange rate change">
       {[0, .25, .5, .75, 1].map(fraction => { const amount = max * fraction; const lineY = y(amount); return <g key={fraction}><line x1="54" x2="634" y1={lineY} y2={lineY} className="fx-scenario-grid"/><text x="47" y={lineY + 4} textAnchor="end" className="fx-scenario-label">{new Intl.NumberFormat("uk-UA", { notation: "compact", maximumFractionDigits: 1 }).format(amount)}</text></g>; })}
-      <line x1="54" x2="634" y1={y(projectedUah)} y2={y(projectedUah)} className="fx-scenario-bond-line"/><text x="630" y={y(projectedUah) - 6} textAnchor="end" className="fx-scenario-bond-label">Bonds + coupons</text>
-      <polyline points={scenarios.map(item => `${x(item.change)},${y(item.amount)}`).join(" ")} className="fx-scenario-usd-line"/>
-      {scenarios.map(item => <g key={item.change}><circle cx={x(item.change)} cy={y(item.amount)} r="3" className="fx-scenario-dot"/><text x={x(item.change)} y="204" textAnchor="middle" className="fx-scenario-label">+{item.change}%</text><text x={x(item.change)} y="218" textAnchor="middle" className="fx-scenario-label">₴{(rate * (1 + item.change / 100)).toFixed(2)}</text></g>)}
+      <line x1="54" x2="634" y1={y(projectedUah)} y2={y(projectedUah)} className="fx-scenario-bond-line"/>
+      <polyline points={scenarios.map(item => `${x(item.change)},${y(item.uahPrincipalUsdCoupons)}`).join(" ")} className="fx-scenario-coupons-line"/>
+      <polyline points={scenarios.map(item => `${x(item.change)},${y(item.usdPrincipal)}`).join(" ")} className="fx-scenario-usd-line"/>
+      {scenarios.map(item => <g key={item.change}><text x={x(item.change)} y="204" textAnchor="middle" className="fx-scenario-label">+{item.change}%</text><text x={x(item.change)} y="218" textAnchor="middle" className="fx-scenario-label">₴{(rate * (1 + item.change / 100)).toFixed(2)}</text></g>)}
       <text x="54" y="230" className="fx-scenario-axis">USD rate change</text>
-    </svg></div>
-    <div className="fx-scenario-footer"><span>At {breakEven !== null && Number.isFinite(breakEven) ? `+${breakEven.toFixed(1)}% (₴${(rate * (1 + breakEven / 100)).toFixed(2)} per USD)` : "—"} USD/UAH change, USD savings match the bond projection.</span><strong>USD savings start at {preciseCurrency(usdSaved, "USD")}</strong></div>
-    <p className="fx-note">Projection uses active UAH face value plus scheduled net coupons through the latest active UAH bond maturity. It assumes principal is held and excludes coupon reinvestment.</p>
+    </svg><div className="fx-scenario-legend"><span><i className="legend-bonds"/>UAH principal + reinvested coupons</span><span><i className="legend-usd"/>USD principal value in UAH</span><span><i className="legend-coupons"/>UAH principal + USD coupon value</span></div></div>
+    <div className="fx-scenario-break-evens"><span>UAH principal + reinvested coupons matches UAH principal + USD-held coupons: <strong>{reinvestmentVsUsdCouponsBreakEven !== null && Number.isFinite(reinvestmentVsUsdCouponsBreakEven) ? `${reinvestmentVsUsdCouponsBreakEven >= 0 ? "+" : ""}${reinvestmentVsUsdCouponsBreakEven.toFixed(1)}% (₴${(rate * (1 + reinvestmentVsUsdCouponsBreakEven / 100)).toFixed(2)}/USD)` : "No scheduled coupons"}</strong></span><span>USD principal matches UAH principal + reinvested coupons: <strong>{principalBreakEven !== null && Number.isFinite(principalBreakEven) ? `${principalBreakEven >= 0 ? "+" : ""}${principalBreakEven.toFixed(1)}% (₴${(rate * (1 + principalBreakEven / 100)).toFixed(2)}/USD)` : "—"}</strong></span><span>USD principal matches UAH principal + USD-held coupons: <strong>{usdCasesBreakEven !== null && Number.isFinite(usdCasesBreakEven) ? `+${usdCasesBreakEven.toFixed(1)}% (₴${(rate * (1 + usdCasesBreakEven / 100)).toFixed(2)}/USD)` : "No positive-rate match"}</strong></span></div>
+    <p className="fx-note">UAH coupons are reinvested through the latest UAH maturity at the active UAH bonds’ quantity-weighted after-tax interest rate ({percent(reinvestmentRate)}). USD principal and coupons are converted at today’s rate and held without interest. Excludes fees and spreads.</p>
   </article>;
 }
 
@@ -111,20 +121,23 @@ export default function AnalyticsTab() {
         ...bd.filter((bond: Bond) => bond.status !== "SOLD").flatMap((bond: Bond) => [bond.purchaseDate.slice(0, 10), ...(bond.status !== "ACTIVE" ? [bond.maturityDate.slice(0, 10)] : [])]),
         ...received.map((coupon: Coupon) => coupon.paymentDate.slice(0, 10)),
       ];
+      const end = new Date().toLocaleDateString("sv-SE");
+      const startDate = new Date(`${end}T00:00:00Z`);
+      startDate.setUTCFullYear(startDate.getUTCFullYear() - 3);
+      let start = startDate.toISOString().slice(0, 10);
       if (dates.length) {
         const firstDate = dates.reduce((first, value) => value < first ? value : first, dates[0]);
-        const startDate = new Date(`${firstDate}T00:00:00Z`);
-        startDate.setUTCDate(startDate.getUTCDate() - 10);
-        const start = startDate.toISOString().slice(0, 10);
-        const end = new Date().toLocaleDateString("sv-SE");
-        try {
-          const historyResponse = await fetch(`/api/exchange-rates/history?start=${start}&end=${end}`);
-          if (historyResponse.ok) {
-            const rates = await historyResponse.json();
-            if (active) setHistoricalRates(rates);
-          }
-        } catch { /* live NBU rates remain available as fallbacks */ }
+        const earlierDate = new Date(`${firstDate}T00:00:00Z`);
+        earlierDate.setUTCDate(earlierDate.getUTCDate() - 10);
+        start = earlierDate.toISOString().slice(0, 10) < start ? earlierDate.toISOString().slice(0, 10) : start;
       }
+      try {
+        const historyResponse = await fetch(`/api/exchange-rates/history?start=${start}&end=${end}`);
+        if (historyResponse.ok) {
+          const rates = await historyResponse.json();
+          if (active) setHistoricalRates(rates);
+        }
+      } catch { /* live NBU rates remain available as fallbacks */ }
       if (active) { setBonds(bd); setCoupons(cd); setExchangeRates(ed); }
     }).catch(reason => { if (active) setError(reason instanceof Error ? reason.message : "Could not load analytics"); }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
@@ -216,7 +229,14 @@ export default function AnalyticsTab() {
   const currencyMax = { UAH: Math.max(1, ...ladder.map(bucket => bucket.amounts.UAH || 0)) };
   const latestUahMaturity = uah.reduce((latest, bond) => bond.maturityDate.slice(0, 10) > latest ? bond.maturityDate.slice(0, 10) : latest, today);
   const forecastYears = Math.max(1, Math.ceil((new Date(`${latestUahMaturity}T00:00:00Z`).getTime() - new Date(`${today}T00:00:00Z`).getTime()) / 31_536_000_000));
-  const projectedUah = totalFaceValue + coupons.filter(c => c.currency === "UAH" && c.status !== "CANCELLED" && c.paymentDate.slice(0, 10) >= today && c.paymentDate.slice(0, 10) <= latestUahMaturity).reduce((sum, c) => sum + Number(c.netAmount), 0);
+  const futureUahCoupons = coupons.filter(c => c.currency === "UAH" && c.status !== "CANCELLED" && c.paymentDate.slice(0, 10) >= today && c.paymentDate.slice(0, 10) <= latestUahMaturity);
+  const futureCouponsUah = futureUahCoupons.reduce((sum, c) => sum + Number(c.netAmount), 0);
+  const reinvestmentRate = totalFaceValue ? uah.reduce((sum, bond) => sum + bond.principal * Number(bond.interestRate) * (1 - Number(bond.taxRate) / 100), 0) / totalFaceValue / 100 : 0;
+  const reinvestedCouponsUah = futureUahCoupons.reduce((sum, coupon) => {
+    const remainingYears = Math.max(0, (new Date(`${latestUahMaturity}T00:00:00Z`).getTime() - new Date(`${coupon.paymentDate.slice(0, 10)}T00:00:00Z`).getTime()) / 31_557_600_000);
+    return sum + Number(coupon.netAmount) * (1 + reinvestmentRate) ** remainingYears;
+  }, 0);
+  const projectedUah = totalFaceValue + reinvestedCouponsUah;
 
   return <>
     <div className="welcome-row"><div><div className="eyebrow">YOUR PORTFOLIO</div><h1>Portfolio <span>analytics.</span></h1><p className="subhead">A current view of your holdings and coupon income.</p></div></div>
@@ -238,7 +258,7 @@ export default function AnalyticsTab() {
         <article className="panel analytics-fx-panel"><div className="panel-head"><div><h2>Capital gain/loss by currency</h2><p>Active bond face value basis · amounts shown in each row’s currency</p></div></div><div className="fx-breakdown"><div className="fx-breakdown-head"><span>View in</span><span>Bond change</span><span>FX impact</span><span>Coupons</span><span>Received</span><span>Profit*</span></div>{capitalByCurrency.map(item => <div className="fx-breakdown-row" key={item.currency}><strong>{item.currency}</strong><span>{preciseCurrency(item.bondGain, item.currency)}</span><span>{preciseCurrency(item.fxImpact, item.currency)}</span><span>{item.couponCount}</span><span>{preciseCurrency(item.couponIncome, item.currency)}</span><strong className={item.profit >= 0 ? "positive" : "negative"}>{preciseCurrency(item.profit, item.currency)}</strong></div>)}</div><p className="fx-note">* Profit = bond change + FX impact + coupons received. Coupon count includes non-cancelled coupons dated through today for active, matured, and redeemed bonds; sold bonds are excluded. Actual receipt isn’t tracked. FX conversions use NBU rates on or before purchase/payment dates, then live rates if history is unavailable.</p></article>
         {hasCurrencyMix && <article className="panel analytics-fx-panel"><div className="panel-head"><div><h2>Currency exposure</h2><p>Active principal at live NBU rates</p></div></div><div className="fx-exposure-list">{activeExposure.map(item => <div className="fx-exposure-row" key={item.currency}><div className="fx-exposure-label"><strong>{item.currency}</strong><span>{money(item.nativeAmount, item.currency)} · {money(item.amount)} · {percent(item.share)}</span></div><div className="coupon-income-track"><i style={{ width: `${item.share * 100}%` }}/></div></div>)}</div></article>}
       </section>
-      <section className="analytics-fx-grid"><CurrencyScenarioChart currentUah={totalFaceValue} projectedUah={projectedUah} rate={liveFx.USD} years={forecastYears}/></section>
+      <section className="analytics-fx-grid"><CurrencyScenarioChart currentUah={totalFaceValue} projectedUah={projectedUah} futureCouponsUah={futureCouponsUah} reinvestedCouponsUah={reinvestedCouponsUah} reinvestmentRate={reinvestmentRate} rate={liveFx.USD} years={forecastYears}/></section>
       <section className="overview-grid analytics-overview"><CashflowChart coupons={coupons} rates={liveFx}/><article className="panel allocation analytics-allocation"><div className="panel-head"><div><h2>Maturity ladder · UAH</h2><p>UAH principal by time to maturity</p></div></div>{uah.length ? <div className="maturity-ladder">{ladder.map(bucket => <div className="maturity-bucket" key={bucket.label}><div className="maturity-bucket-head"><strong>{bucket.label}</strong><span>{bucket.bonds.length} {bucket.bonds.length === 1 ? "bond" : "bonds"}</span></div>{Object.entries(bucket.amounts).map(([currency, amount]) => <div className="maturity-value" key={currency}><div className="maturity-value-label"><span>{currency}</span><strong>{money(amount, currency)}</strong></div><div className="maturity-track"><i style={{ width: `${amount / currencyMax[currency as "UAH"] * 100}%` }}/></div></div>)}</div>)}</div> : <div className="analytics-empty">Add active UAH bonds to see maturity distribution.</div>}</article></section>
       <section className="panel analytics-upcoming"><div className="panel-head"><div><h2>Upcoming UAH coupons</h2><p>Scheduled payments in the next 3 months · after tax</p></div></div>{nextThreeMonths.length ? nextThreeMonths.map(c => <div className="coupon-item" key={c.id}><div className="calendar-tile"><b>{new Intl.DateTimeFormat("en", { month: "short", timeZone: "UTC" }).format(new Date(`${c.paymentDate.slice(0, 10)}T00:00:00Z`)).toUpperCase()}</b><strong>{c.paymentDate.slice(8, 10)}</strong></div><div className="coupon-detail"><strong>{c.bondName}</strong><span>{c.isin} · {date(c.paymentDate)}</span></div><strong className="coupon-amount">{money(Number(c.netAmount))}</strong></div>) : <div className="analytics-empty">No UAH coupons scheduled in the next 3 months.</div>}</section>
     </>}

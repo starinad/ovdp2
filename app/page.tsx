@@ -37,8 +37,13 @@ export default function Home() {
     const controller = new AbortController();
     fetch("/api/exchange-rates", { signal: controller.signal })
       .then(response => response.ok ? response.json() : Promise.reject())
-      .then(setExchangeRates)
-      .catch(() => {});
+      .then(rates => { localStorage.setItem("exchangeRates", JSON.stringify(rates)); setExchangeRates(rates); })
+      .catch(() => {
+        try {
+          const saved = JSON.parse(localStorage.getItem("exchangeRates") || "null");
+          if (saved?.USD?.rate && saved?.EUR?.rate) setExchangeRates(saved);
+        } catch { /* ignore invalid cached data */ }
+      });
     return () => controller.abort();
   }, []);
   const toggleTheme = async () => {

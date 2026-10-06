@@ -111,8 +111,14 @@ export default function AnalyticsTab() {
   useEffect(() => {
     let active = true;
     Promise.all([fetch("/api/bonds"), fetch("/api/coupons"), fetch("/api/exchange-rates")]).then(async ([br, cr, er]) => {
-      const [bd, cd, ed] = await Promise.all([br.json(), cr.json(), er.json()]);
-      if (!br.ok || !cr.ok || !er.ok) throw new Error(bd.error || cd.error || ed.error || "Could not load analytics");
+      const [bd, cd, ed] = await Promise.all([br.json(), cr.json(), er.ok ? er.json() : Promise.resolve(null)]);
+      if (!br.ok || !cr.ok) throw new Error(bd.error || cd.error || "Could not load analytics");
+      let rates = ed;
+      if (rates && active) { try { localStorage.setItem("exchangeRates", JSON.stringify(rates)); } catch { /* storage is optional */ } }
+      if (!rates) {
+        try { rates = JSON.parse(localStorage.getItem("exchangeRates") || "null"); } catch { /* ignore invalid cached data */ }
+      }
+      if (!rates?.USD?.rate || !rates?.EUR?.rate) throw new Error("Could not load exchange rates; no saved rates are available");
       const incomeBondIds = new Set(bd.filter((bond: Bond) => bond.status !== "SOLD").map((bond: Bond) => bond.id));
       const received = cd.filter((coupon: Coupon) => incomeBondIds.has(coupon.bondId) && coupon.status !== "CANCELLED" && coupon.paymentDate.slice(0, 10) <= new Date().toLocaleDateString("sv-SE"));
       const dates = [
@@ -136,7 +142,7 @@ export default function AnalyticsTab() {
           if (active) setHistoricalRates(rates);
         }
       } catch { /* live NBU rates remain available as fallbacks */ }
-      if (active) { setBonds(bd); setCoupons(cd); setExchangeRates(ed); }
+      if (active) { setBonds(bd); setCoupons(cd); setExchangeRates(rates); }
     }).catch(reason => { if (active) setError(reason instanceof Error ? reason.message : "Could not load analytics"); }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, []);

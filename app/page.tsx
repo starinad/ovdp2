@@ -10,7 +10,7 @@ import AnalyticsTab from "./AnalyticsTab";
 
 const tabs = ["Analytics", "Bonds", "Coupons", "Cashflow", "Live Prices"] as const;
 type Tab = typeof tabs[number];
-type ExchangeRates = { USD: { rate: number; exchangedate: string }; EUR: { rate: number; exchangedate: string } };
+type ExchangeRates = { USD: { rate: number; exchangedate: string }; EUR: { rate: number; exchangedate: string }; stale?: boolean };
 
 function Icon({ name, size = 18 }: { name: string; size?: number }) {
   const common = { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.7, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
@@ -37,11 +37,11 @@ export default function Home() {
     const controller = new AbortController();
     fetch("/api/exchange-rates", { signal: controller.signal })
       .then(response => response.ok ? response.json() : Promise.reject())
-      .then(rates => { localStorage.setItem("exchangeRates", JSON.stringify(rates)); setExchangeRates(rates); })
+      .then(rates => { localStorage.setItem("exchangeRates", JSON.stringify(rates)); setExchangeRates({ ...rates, stale: false }); })
       .catch(() => {
         try {
           const saved = JSON.parse(localStorage.getItem("exchangeRates") || "null");
-          if (saved?.USD?.rate && saved?.EUR?.rate) setExchangeRates(saved);
+          if (saved?.USD?.rate && saved?.EUR?.rate) setExchangeRates({ ...saved, stale: true });
         } catch { /* ignore invalid cached data */ }
       });
     return () => controller.abort();
@@ -61,5 +61,5 @@ export default function Home() {
       setThemeSaving(false);
     }
   };
-  return <div className="app-shell"><header className="topbar"><a className="brand" href="#"><span className="brand-mark"><span/></span><span>obl<span className="brand-dot">.</span>ig</span></a><nav className="main-nav" aria-label="Main navigation">{tabs.map((tab, i)=><button key={tab} onClick={()=>setActive(tab)} className={active === tab ? "nav-item active" : "nav-item"}><Icon name={["grid","layers","calendar","arrows","search"][i]}/>{tab}</button>)}</nav><div className="top-actions"><div className="exchange-rates" aria-label="Official NBU exchange rates to hryvnia" title={exchangeRates ? `NBU rate as of ${exchangeRates.USD.exchangedate}` : "Official NBU exchange rates"}><span>USD <strong>{exchangeRates ? `₴${exchangeRates.USD.rate.toFixed(2)}` : "—"}</strong></span><span>EUR <strong>{exchangeRates ? `₴${exchangeRates.EUR.rate.toFixed(2)}` : "—"}</strong></span></div><button className="theme-toggle" onClick={toggleTheme} disabled={!themeReady || themeSaving} aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}>{themeSaving ? "Saving…" : theme === "dark" ? "☀ Light" : "☾ Dark"}</button>{themeError && <span className="theme-error" role="alert">{themeError}</span>}<span className="top-divider"/><SignOutButton/></div></header><main className="main-content">{active === "Analytics" ? <AnalyticsTab/> : active === "Bonds" ? <BondsTab/> : active === "Coupons" ? <CouponsTab/> : active === "Cashflow" ? <CashflowTab/> : <LivePricesTab/>}<footer className="footer"><span>© 2026 OBLIG</span><span><i/> All systems operational</span><span>Data refreshed a moment ago</span></footer></main></div>;
+  return <div className="app-shell"><header className="topbar"><a className="brand" href="#"><span className="brand-mark"><span/></span><span>obl<span className="brand-dot">.</span>ig</span></a><nav className="main-nav" aria-label="Main navigation">{tabs.map((tab, i)=><button key={tab} onClick={()=>setActive(tab)} className={active === tab ? "nav-item active" : "nav-item"}><Icon name={["grid","layers","calendar","arrows","search"][i]}/>{tab}</button>)}</nav><div className="top-actions"><div className="exchange-rates" aria-label={`Official NBU exchange rates to hryvnia${exchangeRates?.stale ? ", cached rates; live rates unavailable" : ""}`} title={exchangeRates ? `NBU rate as of ${exchangeRates.USD.exchangedate}${exchangeRates.stale ? " · cached; live rates unavailable" : ""}` : "Official NBU exchange rates"}><span>USD <strong>{exchangeRates ? `₴${exchangeRates.USD.rate.toFixed(2)}` : "—"}</strong></span><span>EUR <strong>{exchangeRates ? `₴${exchangeRates.EUR.rate.toFixed(2)}` : "—"}</strong></span>{exchangeRates?.stale && <span className="exchange-rate-status">Cached</span>}</div><button className="theme-toggle" onClick={toggleTheme} disabled={!themeReady || themeSaving} aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}>{themeSaving ? "Saving…" : theme === "dark" ? "☀ Light" : "☾ Dark"}</button>{themeError && <span className="theme-error" role="alert">{themeError}</span>}<span className="top-divider"/><SignOutButton/></div></header><main className="main-content">{active === "Analytics" ? <AnalyticsTab/> : active === "Bonds" ? <BondsTab/> : active === "Coupons" ? <CouponsTab/> : active === "Cashflow" ? <CashflowTab/> : <LivePricesTab/>}<footer className="footer"><span>© 2026 OBLIG</span><span><i/> All systems operational</span><span>Data refreshed a moment ago</span></footer></main></div>;
 }

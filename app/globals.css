@@ -57,6 +57,7 @@
 .quantity-field{display:flex;align-items:center;gap:8px;color:#98a4b2;font-size:11px}.quantity-field input{width:72px;height:32px;padding:0 8px;border:1px solid #e8edf3;border-radius:6px;background:#fff;color:#53647b;font:500 12px 'DM Sans'}:root:not([data-theme="light"]) .quantity-field input{background:#202d3e;color:#d5dfed;border-color:#35445a}
 :root[data-theme="light"] .bond-table td.loss-value{color:#c0394b}:root:not([data-theme="light"]) .bond-table td.loss-value{color:#ff7b86}:root[data-theme="light"] .bond-table td.profit-value{color:#198563}:root:not([data-theme="light"]) .bond-table td.profit-value{color:#50c49a}
 .exchange-rates{display:flex;gap:12px;white-space:nowrap;color:var(--muted);font-size:12px}.exchange-rates strong{color:var(--ink);font-weight:700}
+.exchange-rate-status{color:var(--muted);font-size:10px}
 .comparison-subvalue{display:block;margin-top:3px;color:var(--muted);font-size:10px;white-space:nowrap}
 .currency-comparison .fx-breakdown-row>strong:nth-child(3){text-align:right}
 .currency-comparison .fx-breakdown-head,.currency-comparison .fx-breakdown-row{grid-template-columns:52px repeat(7,minmax(0,1fr));width:100%;min-width:950px;box-sizing:border-box;gap:7px}

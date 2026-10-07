@@ -12,7 +12,7 @@ export async function GET() {
   const ownerId = await requireUserId();
   if (!ownerId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
-    const { rows } = await getPool().query(`SELECT ${bondColumns} FROM bonds WHERE owner_id = $1 ORDER BY maturity_date, name COLLATE "C", isin`, [ownerId]);
+    const { rows } = await getPool().query(`SELECT ${bondColumns} FROM bonds WHERE owner_id = $1 ORDER BY maturity_date, name COLLATE "C", isin, purchase_date, id`, [ownerId]);
     return NextResponse.json(rows);
   } catch (error) {
     console.error("Could not load bonds", error);

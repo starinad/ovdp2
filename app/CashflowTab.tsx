@@ -5,7 +5,7 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 type Coupon = { paymentDate: string; grossAmount: number; taxAmount: number; netAmount: number; status: string };
 type PortfolioCoupon = Coupon & { bondName: string; isin: string };
 type Bond = { id: string; isin: string; name: string; status: string; faceValue: number; quantity: number; currency: string; maturityDate: string };
-type LiveBond = { isin: string; maturity: string; currency: string; sellPrice: number | null; sellYield: number; coupons?: { type: string; paymentDate: string; value: number }[] };
+type LiveBond = { isin: string; maturity: string; termMaturity: string; currency: string; sellPrice: number | null; sellYield: number; coupons?: { type: string; paymentDate: string; value: number }[] };
 type CashMonth = { month: string; gross: number; tax: number; net: number; maturity: number; totalNet: number; simulatedNet: number; simulatedMaturity: number; coupons: number; maturities: number };
 
 const money = (value: number) => new Intl.NumberFormat("uk-UA", { style: "currency", currency: "UAH", maximumFractionDigits: 2 }).format(value);
@@ -21,6 +21,7 @@ export default function CashflowTab() {
   const [bonds, setBonds] = useState<Bond[]>([]);
   const [liveBonds, setLiveBonds] = useState<LiveBond[]>([]);
   const [buyQuantities, setBuyQuantities] = useState<Record<string, string>>({});
+  const [includedBonds, setIncludedBonds] = useState<Record<string, boolean>>({});
   const [quantitiesLoaded, setQuantitiesLoaded] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState("");
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
@@ -31,6 +32,8 @@ export default function CashflowTab() {
     try {
       const saved = JSON.parse(localStorage.getItem("cashflow-quantities") || "{}");
       if (saved && typeof saved === "object" && !Array.isArray(saved)) setBuyQuantities(saved);
+      const savedIncluded = JSON.parse(localStorage.getItem("cashflow-included-bonds") || "{}");
+      if (savedIncluded && typeof savedIncluded === "object" && !Array.isArray(savedIncluded)) setIncludedBonds(savedIncluded);
     } catch {}
     setQuantitiesLoaded(true);
   }, []);
@@ -38,8 +41,9 @@ export default function CashflowTab() {
   useEffect(() => {
     if (quantitiesLoaded) {
       try { localStorage.setItem("cashflow-quantities", JSON.stringify(buyQuantities)); } catch {}
+      try { localStorage.setItem("cashflow-included-bonds", JSON.stringify(includedBonds)); } catch {}
     }
-  }, [buyQuantities, quantitiesLoaded]);
+  }, [buyQuantities, includedBonds, quantitiesLoaded]);
 
   useEffect(() => {
     Promise.all([fetch("/api/coupons"), fetch("/api/bonds"), fetch("/api/live-prices")])
@@ -83,7 +87,7 @@ export default function CashflowTab() {
       row.maturities++;
     }
     for (const bond of liveBonds) {
-      const quantity = Number(buyQuantities[bond.isin]) || 0;
+      const quantity = includedBonds[bond.isin] === false ? 0 : Number(buyQuantities[bond.isin]) || 0;
       if (!quantity) continue;
       for (const coupon of bond.coupons ?? []) {
         const date = parseDMY(coupon.paymentDate);
@@ -97,7 +101,7 @@ export default function CashflowTab() {
     }
     if (mode === "FUTURE") getMonth(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`);
     return [...map.values()].sort((a, b) => a.month.localeCompare(b.month)).map(row => ({ ...row, totalNet: row.net + row.maturity }));
-  }, [bonds, buyQuantities, coupons, liveBonds, mode]);
+  }, [bonds, buyQuantities, coupons, includedBonds, liveBonds, mode]);
 
   useEffect(() => {
     if (!months.some(row => row.month === selectedMonth)) setSelectedMonth(months[0]?.month || "");
@@ -129,7 +133,7 @@ export default function CashflowTab() {
         <tr className="cashflow-total"><th>Total</th><th>{money(totals.gross)}</th><th>{money(totals.tax)}</th><th>{money(totals.net)}{totals.simulatedNet > 0 && <span className="cashflow-simulated-value"> + {money(totals.simulatedNet)}</span>}</th><th>{money(totals.maturity)}</th><th>{money(totals.gross + totals.maturity)}</th><th>{money(totals.totalNet)}{totals.simulatedNet + totals.simulatedMaturity > 0 && <span className="cashflow-simulated-value"> + {money(totals.simulatedNet + totals.simulatedMaturity)}</span>}</th><th>{totals.coupons}</th><th>{totals.maturities}</th></tr>
         {months.map(row => <Fragment key={row.month}><tr className={selectedMonth === row.month ? "cashflow-row selected" : "cashflow-row"} tabIndex={0} aria-expanded={expandedMonth === row.month} onClick={() => { setSelectedMonth(row.month); setExpandedMonth(expandedMonth === row.month ? null : row.month); }} onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setSelectedMonth(row.month); setExpandedMonth(expandedMonth === row.month ? null : row.month); } }}>
           <td><strong>{new Intl.DateTimeFormat("en", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${row.month}-01T00:00:00Z`))}</strong></td><td>{money(row.gross)}</td><td>{money(row.tax)}</td><td style={{ background: heatFill(row.net, row.simulatedNet, maxNet), color: "var(--heat-text)", fontWeight: 700 }}>{money(row.net)}{row.simulatedNet > 0 && <span className="cashflow-simulated-value"> + {money(row.simulatedNet)}</span>}</td><td>{money(row.maturity)}</td><td>{money(row.gross + row.maturity)}</td><td style={{ background: heatFill(row.totalNet, row.simulatedNet + row.simulatedMaturity, maxTotalNet), color: "var(--heat-text)", fontWeight: 700 }}><strong>{money(row.totalNet)}{row.simulatedNet + row.simulatedMaturity > 0 && <span className="cashflow-simulated-value"> + {money(row.simulatedNet + row.simulatedMaturity)}</span>}</strong></td><td>{row.coupons}</td><td>{row.maturities}</td>
-        </tr>{expandedMonth === row.month && <tr className="cashflow-expanded"><td colSpan={9}><div className="cashflow-expanded-content"><div className="panel-head"><div><h2>Live bonds with coupons <span>{selectedLiveBonds.length}</span></h2><p>{row.month} · sorted by maturity</p></div></div>{selectedLiveBonds.length ? <div className="bond-table-wrap"><table className="bond-table cashflow-live-table"><thead><tr><th>ISIN</th><th>Maturity</th><th>Yield</th><th>Price</th><th>Quantity</th><th>Buy Cost</th><th>Loss</th></tr></thead><tbody>{selectedLiveBonds.map(bond => { const quantity = Number(buyQuantities[bond.isin]) || 0; const redemption = bond.coupons?.find(coupon => coupon.type === "Погашення")?.value ?? 0; return <tr key={bond.isin}><td><strong>{bond.isin}</strong></td><td>{bond.maturity}</td><td>{bond.sellYield}%</td><td>{bond.sellPrice == null ? "—" : money(bond.sellPrice)}</td><td><input className="cashflow-buy-quantity" aria-label={`Quantity for ${bond.isin}`} type="number" min="0" step="1" value={buyQuantities[bond.isin] ?? "0"} onChange={event => setBuyQuantities(current => ({ ...current, [bond.isin]: event.target.value }))} /></td><td>{bond.sellPrice == null ? "—" : money(bond.sellPrice * quantity)}</td><td className="loss-value">{bond.sellPrice == null ? "—" : money((redemption - bond.sellPrice) * quantity)}</td></tr>; })}</tbody></table></div> : <div className="cashflow-empty">No available UAH bonds have coupon payments in this month.</div>}</div></td></tr>}</Fragment>)}
+        </tr>{expandedMonth === row.month && <tr className="cashflow-expanded"><td colSpan={9}><div className="cashflow-expanded-content"><div className="panel-head"><div><h2>Live bonds with coupons <span>{selectedLiveBonds.length}</span></h2><p>{row.month} · sorted by maturity</p></div></div>{selectedLiveBonds.length ? <div className="bond-table-wrap"><table className="bond-table cashflow-live-table"><thead><tr><th>ISIN</th><th>Maturity</th><th>Term</th><th>Yield</th><th>Price</th><th>Quantity</th><th>Use</th><th>Buy Cost</th><th>Loss</th><th>Profit</th></tr></thead><tbody>{selectedLiveBonds.map(bond => { const quantity = includedBonds[bond.isin] === false ? 0 : Number(buyQuantities[bond.isin]) || 0; const redemption = bond.coupons?.find(coupon => coupon.type === "Погашення")?.value ?? 0; const couponTotal = (bond.coupons ?? []).reduce((sum, coupon) => sum + Number(coupon.value), 0); return <tr key={bond.isin}><td><strong>{bond.isin}</strong></td><td>{bond.maturity}</td><td>{bond.termMaturity}</td><td>{bond.sellYield}%</td><td>{bond.sellPrice == null ? "—" : money(bond.sellPrice)}</td><td><input className="cashflow-buy-quantity" aria-label={`Quantity for ${bond.isin}`} type="number" min="0" step="1" value={buyQuantities[bond.isin] ?? "0"} onChange={event => setBuyQuantities(current => ({ ...current, [bond.isin]: event.target.value }))} /></td><td><input aria-label={`Include ${bond.isin} in calculations`} type="checkbox" checked={includedBonds[bond.isin] !== false} onChange={event => setIncludedBonds(current => ({ ...current, [bond.isin]: event.target.checked }))} /></td><td>{bond.sellPrice == null ? "—" : money(bond.sellPrice * quantity)}</td><td className="loss-value">{bond.sellPrice == null ? "—" : money((redemption - bond.sellPrice) * quantity)}</td><td className="profit-value">{bond.sellPrice == null ? "—" : money((couponTotal - bond.sellPrice) * quantity)}</td></tr>; })}</tbody></table></div> : <div className="cashflow-empty">No available UAH bonds have coupon payments in this month.</div>}</div></td></tr>}</Fragment>)}
       </tbody></table></div>}
     </section>
   </>;

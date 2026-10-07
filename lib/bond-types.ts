@@ -1,4 +1,4 @@
-export const bondStatuses = ["ACTIVE", "MATURED", "REDEEMED", "SOLD"] as const;
+export const bondStatuses = ["ACTIVE", "PENDING", "MATURED", "REDEEMED", "SOLD"] as const;
 export const currencies = ["UAH", "USD", "EUR"] as const;
 export const couponFrequencies = ["MONTHLY", "QUARTERLY", "SEMIANNUAL", "ANNUAL", "AT_MATURITY"] as const;
 export const dayCountConventions = ["ACT/ACT", "ACT/365", "ACT/360", "30/360"] as const;

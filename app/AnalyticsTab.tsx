@@ -126,7 +126,7 @@ export default function AnalyticsTab() {
       const incomeBondIds = new Set(bd.filter((bond: Bond) => bond.status !== "SOLD").map((bond: Bond) => bond.id));
       const received = cd.filter((coupon: Coupon) => incomeBondIds.has(coupon.bondId) && coupon.status !== "CANCELLED" && coupon.paymentDate.slice(0, 10) <= new Date().toLocaleDateString("sv-SE"));
       const dates = [
-        ...bd.filter((bond: Bond) => bond.status !== "SOLD").flatMap((bond: Bond) => [bond.purchaseDate.slice(0, 10), ...(bond.status !== "ACTIVE" ? [bond.maturityDate.slice(0, 10)] : [])]),
+        ...bd.filter((bond: Bond) => bond.status !== "SOLD").flatMap((bond: Bond) => [bond.purchaseDate.slice(0, 10), ...(!["ACTIVE", "PENDING"].includes(bond.status) ? [bond.maturityDate.slice(0, 10)] : [])]),
         ...received.map((coupon: Coupon) => coupon.paymentDate.slice(0, 10)),
       ];
       const end = new Date().toLocaleDateString("sv-SE");
@@ -152,7 +152,7 @@ export default function AnalyticsTab() {
   }, []);
 
   const positions = useMemo(() => {
-    return bonds.filter(b => b.status === "ACTIVE").map(b => {
+    return bonds.filter(b => ["ACTIVE", "PENDING"].includes(b.status)).map(b => {
       const maturity = new Date(`${b.maturityDate.slice(0, 10)}T00:00:00Z`);
       const asOf = new Date().toLocaleDateString("sv-SE");
       const monthsToMaturity = Math.max(0, (maturity.getTime() - new Date(`${asOf}T00:00:00Z`).getTime()) / 86_400_000 / 30.4375);
@@ -165,7 +165,7 @@ export default function AnalyticsTab() {
   }), [exchangeRates]);
   const baseCurrencies: Currency[] = ["UAH", "USD", "EUR"];
   const today = new Date().toLocaleDateString("sv-SE");
-  const activeIds = new Set(bonds.filter(bond => bond.status === "ACTIVE").map(bond => bond.id));
+  const activeIds = new Set(bonds.filter(bond => ["ACTIVE", "PENDING"].includes(bond.status)).map(bond => bond.id));
   const incomeBondIds = new Set(bonds.filter(bond => bond.status !== "SOLD").map(bond => bond.id));
   const receivedCoupons = coupons.filter(coupon => incomeBondIds.has(coupon.bondId) && coupon.status !== "CANCELLED" && coupon.paymentDate.slice(0, 10) <= today);
   const equivalents = baseCurrencies.map(currency => ({

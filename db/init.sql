@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS bonds (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   isin VARCHAR(12) NOT NULL CHECK (isin ~ '^[A-Z]{2}[A-Z0-9]{9}[0-9]$'),
   name VARCHAR(120) NOT NULL,
-  status VARCHAR(12) NOT NULL CHECK (status IN ('ACTIVE', 'MATURED', 'REDEEMED', 'SOLD')),
+  status VARCHAR(12) NOT NULL CHECK (status IN ('ACTIVE', 'PENDING', 'MATURED', 'REDEEMED', 'SOLD')),
   face_value NUMERIC(18, 6) NOT NULL CHECK (face_value > 0),
   quantity INTEGER NOT NULL CHECK (quantity > 0),
   purchase_price NUMERIC(18, 6) NOT NULL CHECK (purchase_price >= 0),

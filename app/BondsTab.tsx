@@ -80,7 +80,7 @@ export default function BondsTab() {
 
   function openForm(bond?: Bond) {
     setEditingId(bond?.id ?? null);
-    setForm(bond ? { ...bond, faceValue: fixed2(bond.faceValue), quantity: String(bond.quantity), purchasePrice: fixed2(Number(bond.purchasePrice) * bond.quantity), interestRate: fixed2(bond.interestRate), taxRate: fixed2(bond.taxRate), fixedCoupon: fixed2(bond.fixedCoupon), purchaseDate: bond.purchaseDate.slice(0, 10), maturityDate: bond.maturityDate.slice(0, 10), firstCouponDate: bond.firstCouponDate.slice(0, 10) } : {
+    setForm(bond ? { ...bond, faceValue: fixed2(bond.faceValue), quantity: String(bond.quantity), purchasePrice: fixed2(bond.purchasePrice), interestRate: fixed2(bond.interestRate), taxRate: fixed2(bond.taxRate), fixedCoupon: fixed2(bond.fixedCoupon), purchaseDate: bond.purchaseDate.slice(0, 10), maturityDate: bond.maturityDate.slice(0, 10), firstCouponDate: bond.firstCouponDate.slice(0, 10) } : {
       ...blankBond(),
     });
   }
@@ -91,7 +91,7 @@ export default function BondsTab() {
     setSaving(true);
     try {
       const response = await fetch(editingId ? `/api/bonds/${editingId}` : "/api/bonds", {
-        method: editingId ? "PUT" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, purchasePrice: fixed2(Number(form.purchasePrice) / Number(form.quantity)) }),
+        method: editingId ? "PUT" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form),
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "Could not save bond");
@@ -125,7 +125,7 @@ export default function BondsTab() {
       const today = new Date().toLocaleDateString("sv-SE");
       const coupons = (bond.coupons ?? []).filter(coupon => coupon.type !== "Погашення" && isoDate(coupon.paymentDate) >= today);
       const coupon = coupons[0];
-      setForm(current => current?.isin === isin ? { ...current, name: `${bond.military ? "Military" : "Government"} bond ${isin}`, currency: bond.currency as BondInput["currency"], purchasePrice: fixed2(bond.sellPrice * Number(current.quantity)), purchaseDate: today, maturityDate: isoDate(bond.maturity), firstCouponDate: coupon ? isoDate(coupon.paymentDate) : isoDate(bond.maturity), fixedCoupon: fixed2(coupon?.value ?? 0), interestRate: fixed2(bond.sellYield) } : current);
+      setForm(current => current?.isin === isin ? { ...current, name: `${bond.military ? "Military" : "Government"} bond ${isin}`, currency: bond.currency as BondInput["currency"], purchasePrice: fixed2(bond.sellPrice), purchaseDate: today, maturityDate: isoDate(bond.maturity), firstCouponDate: coupon ? isoDate(coupon.paymentDate) : isoDate(bond.maturity), fixedCoupon: fixed2(coupon?.value ?? 0), interestRate: fixed2(bond.sellYield) } : current);
     } catch { /* keep manual entry available when live prices are unavailable */ }
     finally { setLookingUp(false); }
   }
@@ -147,8 +147,8 @@ export default function BondsTab() {
       <label className="form-field"><span>Name</span><input required maxLength={120} value={form.name} onChange={event => update("name", event.target.value)} placeholder="e.g. Ukraine 2027"/></label>
       <label className="form-field"><span>Status</span><select value={form.status} onChange={event => update("status", event.target.value)}>{bondStatuses.map(value => <option key={value} value={value}>{label(value)}</option>)}</select></label>
       <label className="form-field"><span>Face value</span><input required type="number" min="0.01" step="0.01" value={form.faceValue} onChange={event => update("faceValue", event.target.value)} onBlur={event => update("faceValue", fixed2(event.currentTarget.value))}/></label>
-      <label className="form-field"><span>Quantity</span><input required type="number" min="1" step="1" value={form.quantity} onChange={event => setForm(current => current && { ...current, quantity: event.target.value, ...(event.target.value ? { purchasePrice: fixed2(Number(current.purchasePrice) / Number(current.quantity || 1) * Number(event.target.value)) } : {}) })}/></label>
-      <label className="form-field"><span>Purchase price <small>total</small></span><input required type="number" min="0" step="0.01" value={form.purchasePrice} onChange={event => update("purchasePrice", event.target.value)} onBlur={event => update("purchasePrice", fixed2(event.currentTarget.value))}/></label>
+      <label className="form-field"><span>Quantity</span><input required type="number" min="1" step="1" value={form.quantity} onChange={event => update("quantity", event.target.value)}/></label>
+      <label className="form-field"><span>Purchase price <small>per bond</small></span><input required type="number" min="0" step="0.01" value={form.purchasePrice} onChange={event => update("purchasePrice", event.target.value)} onBlur={event => update("purchasePrice", fixed2(event.currentTarget.value))}/></label>
       <label className="form-field"><span>Currency</span><select value={form.currency} onChange={event => update("currency", event.target.value)}>{currencies.map(value => <option key={value}>{value}</option>)}</select></label>
       <label className="form-field"><span>Interest rate (%)</span><input required type="number" min="0" step="0.01" value={form.interestRate} onChange={event => update("interestRate", event.target.value)} onBlur={event => update("interestRate", fixed2(event.currentTarget.value))}/></label>
       <label className="form-field"><span>Tax rate (%)</span><input required type="number" min="0" max="100" step="0.01" value={form.taxRate} onChange={event => update("taxRate", event.target.value)} onBlur={event => update("taxRate", fixed2(event.currentTarget.value))}/></label>

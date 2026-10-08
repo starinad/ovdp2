@@ -28,11 +28,22 @@ function Icon({ name, size = 18 }: { name: string; size?: number }) {
 export default function Home() {
   const [active, setActive] = useState<Tab>("Analytics");
   const [theme, setTheme] = useState<"dark" | "light">("dark");
-  const [themeReady] = useState(true);
   const [themeSaving, setThemeSaving] = useState(false);
   const [themeError, setThemeError] = useState("");
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [monthlyInvestment, setMonthlyInvestment] = useState("0");
+  const [monthlyInvestmentCurrency, setMonthlyInvestmentCurrency] = useState<"UAH" | "USD">("UAH");
+  const [investmentSaving, setInvestmentSaving] = useState(false);
+  const [investmentError, setInvestmentError] = useState("");
   const [exchangeRates, setExchangeRates] = useState<ExchangeRates | null>(null);
   useLayoutEffect(() => setTheme(document.documentElement.dataset.theme === "light" ? "light" : "dark"), []);
+  useEffect(() => {
+    fetch("/api/config").then(response => response.ok ? response.json() : Promise.reject())
+      .then(config => {
+        setMonthlyInvestment(String(config.monthlyInvestment ?? 0));
+        setMonthlyInvestmentCurrency(config.monthlyInvestmentCurrency === "USD" ? "USD" : "UAH");
+      }).catch(() => {});
+  }, []);
   useEffect(() => {
     const controller = new AbortController();
     fetch("/api/exchange-rates", { signal: controller.signal })
@@ -61,5 +72,22 @@ export default function Home() {
       setThemeSaving(false);
     }
   };
-  return <div className="app-shell"><header className="topbar"><a className="brand" href="#"><span className="brand-mark"><span/></span><span>obl<span className="brand-dot">.</span>ig</span></a><nav className="main-nav" aria-label="Main navigation">{tabs.map((tab, i)=><button key={tab} onClick={()=>setActive(tab)} className={active === tab ? "nav-item active" : "nav-item"}><Icon name={["grid","layers","calendar","arrows","search"][i]}/>{tab}</button>)}</nav><div className="top-actions"><div className="exchange-rates" aria-label={`Official NBU exchange rates to hryvnia${exchangeRates?.stale ? ", cached rates; live rates unavailable" : ""}`} title={exchangeRates ? `NBU rate as of ${exchangeRates.USD.exchangedate}${exchangeRates.stale ? " · cached; live rates unavailable" : ""}` : "Official NBU exchange rates"}><span>USD <strong>{exchangeRates ? `₴${exchangeRates.USD.rate.toFixed(2)}` : "—"}</strong></span><span>EUR <strong>{exchangeRates ? `₴${exchangeRates.EUR.rate.toFixed(2)}` : "—"}</strong></span>{exchangeRates?.stale && <span className="exchange-rate-status">Cached</span>}</div><button className="theme-toggle" onClick={toggleTheme} disabled={!themeReady || themeSaving} aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}>{themeSaving ? "Saving…" : theme === "dark" ? "☀ Light" : "☾ Dark"}</button>{themeError && <span className="theme-error" role="alert">{themeError}</span>}<span className="top-divider"/><SignOutButton/></div></header><main className="main-content">{active === "Analytics" ? <AnalyticsTab/> : active === "Bonds" ? <BondsTab/> : active === "Coupons" ? <CouponsTab/> : active === "Cashflow" ? <CashflowTab/> : <LivePricesTab/>}<footer className="footer"><span>© 2026 OBLIG</span><span><i/> All systems operational</span><span>Data refreshed a moment ago</span><span title="Build commit">Version {process.env.NEXT_PUBLIC_APP_VERSION}</span></footer></main></div>;
+  const saveMonthlyInvestment = async () => {
+    const amount = Number(monthlyInvestment);
+    if (!Number.isFinite(amount) || amount < 0) {
+      setInvestmentError("Enter a non-negative amount.");
+      return;
+    }
+    setInvestmentSaving(true);
+    setInvestmentError("");
+    try {
+      const response = await fetch("/api/config", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ monthlyInvestment: amount, monthlyInvestmentCurrency }) });
+      if (!response.ok) throw new Error((await response.json()).error || "Could not save monthly investment");
+    } catch (reason) {
+      setInvestmentError(reason instanceof Error ? reason.message : "Could not save monthly investment");
+    } finally {
+      setInvestmentSaving(false);
+    }
+  };
+  return <div className="app-shell"><header className="topbar"><a className="brand" href="#"><span className="brand-mark"><span/></span><span>obl<span className="brand-dot">.</span>ig</span></a><nav className="main-nav" aria-label="Main navigation">{tabs.map((tab, i)=><button key={tab} onClick={()=>setActive(tab)} className={active === tab ? "nav-item active" : "nav-item"}><Icon name={["grid","layers","calendar","arrows","search"][i]}/>{tab}</button>)}</nav><div className="top-actions"><div className="exchange-rates" aria-label={`Official NBU exchange rates to hryvnia${exchangeRates?.stale ? ", cached rates; live rates unavailable" : ""}`} title={exchangeRates ? `NBU rate as of ${exchangeRates.USD.exchangedate}${exchangeRates.stale ? " · cached; live rates unavailable" : ""}` : "Official NBU exchange rates"}><span>USD <strong>{exchangeRates ? `₴${exchangeRates.USD.rate.toFixed(2)}` : "—"}</strong></span><span>EUR <strong>{exchangeRates ? `₴${exchangeRates.EUR.rate.toFixed(2)}` : "—"}</strong></span>{exchangeRates?.stale && <span className="exchange-rate-status">Cached</span>}</div><span className="top-divider"/><SignOutButton onOpenSettings={()=>setSettingsOpen(true)}/></div></header><main className="main-content">{active === "Analytics" ? <AnalyticsTab/> : active === "Bonds" ? <BondsTab/> : active === "Coupons" ? <CouponsTab/> : active === "Cashflow" ? <CashflowTab/> : <LivePricesTab/>}<footer className="footer"><span>© 2026 OBLIG</span><span><i/> All systems operational</span><span>Data refreshed a moment ago</span><span title="Build commit">Version {process.env.NEXT_PUBLIC_APP_VERSION}</span></footer></main>{settingsOpen && <div className="bond-modal-backdrop" onMouseDown={event=>{if(event.target===event.currentTarget)setSettingsOpen(false);}}><section className="bond-modal settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title"><div className="bond-modal-head"><div><div className="eyebrow">PREFERENCES</div><h2 id="settings-title">Settings</h2><p>Manage your dashboard preferences.</p></div><button className="modal-close" aria-label="Close settings" onClick={()=>setSettingsOpen(false)}>×</button></div><div className="settings-row"><div><strong>Appearance</strong><p>Choose the dashboard color theme.</p></div><button className="theme-toggle" onClick={toggleTheme} disabled={themeSaving}>{themeSaving ? "Saving…" : theme === "dark" ? "☀ Light mode" : "☾ Dark mode"}</button></div>{themeError && <p className="theme-error" role="alert">{themeError}</p>}<div className="settings-investment"><label><span>Monthly Investment</span><div className="investment-fields"><input aria-label="Monthly investment amount" type="number" min="0" step="any" value={monthlyInvestment} onChange={event=>setMonthlyInvestment(event.target.value)}/><select aria-label="Monthly investment currency" value={monthlyInvestmentCurrency} onChange={event=>setMonthlyInvestmentCurrency(event.target.value as "UAH" | "USD")}><option value="UAH">UAH</option><option value="USD">USD</option></select></div></label><button className="button primary" onClick={saveMonthlyInvestment} disabled={investmentSaving}>{investmentSaving ? "Saving…" : "Save"}</button></div>{investmentError && <p className="theme-error" role="alert">{investmentError}</p>}</section></div>}</div>;
 }

@@ -77,3 +77,5 @@
 @media(max-width:760px){.envelop-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.envelop-form{align-items:stretch;flex-direction:column}.envelop-form .button{align-self:flex-start}}
 .envelop-table td:last-child{width:1%;white-space:nowrap}.envelop-actions{display:flex;justify-content:flex-end;gap:6px}.envelop-actions .button{height:30px;padding:0 9px}.envelop-table input{width:110px;height:32px;padding:0 8px;border:1px solid #e8edf3;border-radius:6px;background:#fff;color:#53647b;font:12px 'DM Sans'}:root:not([data-theme="light"]) .envelop-table input{background:#202d3e;color:#d5dfed;border-color:#35445a}
 .cashflow-sum{display:block;margin-top:2px;font-size:10px;font-weight:500;opacity:.75}
+.analytics-income-history{margin-bottom:16px}.monthly-income-panel{min-height:0}
+.monthly-income-panel .coupon-income-amount span{display:block;min-height:1em;font-size:10px;font-weight:500;color:#98a5b6}

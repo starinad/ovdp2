@@ -79,3 +79,32 @@
 .cashflow-sum{display:block;margin-top:2px;font-size:10px;font-weight:500;opacity:.75}
 .analytics-income-history{margin-bottom:16px}.monthly-income-panel{min-height:0}
 .monthly-income-panel .coupon-income-amount span{display:block;min-height:1em;font-size:10px;font-weight:500;color:#98a5b6}
+.analytics-forecast{margin-bottom:16px}
+.forecast-panel{min-width:0;padding:20px}
+.forecast-legend{display:flex;flex-wrap:wrap;gap:8px 22px;margin:14px 0 6px;color:var(--muted);font-size:11px}
+.forecast-legend span{display:flex;align-items:center;gap:7px}
+.forecast-legend i{display:block;width:18px;height:0;border-top:3px solid #3477e9}
+.forecast-legend .forecast-key-setting{border-top-color:#edaa62;border-top-style:dashed}
+.forecast-legend em{font-style:normal;color:var(--ink);font-weight:600}
+.forecast-chart{position:relative;border-radius:8px;outline:none;cursor:crosshair;touch-action:pan-y;-webkit-tap-highlight-color:transparent}
+.forecast-chart:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
+.forecast-chart svg{display:block;width:100%;height:auto}
+.forecast-grid{stroke:var(--line);stroke-width:1}
+.forecast-label{fill:var(--muted);font-size:12px}
+.forecast-line{fill:none;stroke-width:3;stroke-linejoin:round;stroke-linecap:round}
+.forecast-line-purchases{stroke:#3477e9}
+.forecast-line-setting{stroke:#edaa62;stroke-dasharray:7 4}
+.forecast-guide{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3}
+.forecast-dot{stroke:var(--bg);stroke-width:2.5}
+.forecast-dot-purchases{fill:#3477e9}
+.forecast-dot-setting{fill:#edaa62}
+.forecast-readout{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:12px 0}
+.forecast-readout>div{display:grid;gap:5px;padding:11px 13px;border:1px solid var(--line);border-radius:8px;color:var(--muted);font-size:10px;min-width:0}
+.forecast-readout strong{color:var(--ink);font-size:15px;font-variant-numeric:tabular-nums}
+.forecast-readout small{font-size:10px;color:var(--muted)}
+.forecast-readout .forecast-readout-purchases{border-left:3px solid #3477e9}
+.forecast-readout .forecast-readout-setting{border-left:3px solid #edaa62}
+.forecast-hint{margin-top:2px;color:var(--muted);font-size:10px}
+.forecast-assumptions{margin:10px 0 0;padding:10px 0 0 16px;border-top:1px solid var(--line);color:var(--muted);font-size:10px;display:grid;gap:4px}
+@media(max-width:520px){.forecast-panel{padding:16px}.forecast-readout{grid-template-columns:1fr}.forecast-readout>div{grid-template-columns:1fr auto;align-items:center}.forecast-readout small{grid-column:1/-1}.forecast-label{font-size:15px}}
+

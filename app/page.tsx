@@ -9,22 +9,96 @@ import SignOutButton from "./SignOutButton";
 import AnalyticsTab from "./AnalyticsTab";
 import EnvelopTab from "./EnvelopTab";
 
-const tabs = ["Analytics", "Bonds", "Coupons", "Cashflow", "Live Prices", "Envelop"] as const;
-type Tab = typeof tabs[number];
-type ExchangeRates = { USD: { rate: number; exchangedate: string }; EUR: { rate: number; exchangedate: string }; stale?: boolean };
+import type { ExchangeRates } from "@/lib/exchange-rates";
+
+const tabs = [
+  "Analytics",
+  "Bonds",
+  "Coupons",
+  "Cashflow",
+  "Live Prices",
+  "Envelop",
+] as const;
+type Tab = (typeof tabs)[number];
 
 function Icon({ name, size = 18 }: { name: string; size?: number }) {
-  const common = { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.7, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
-  if (name === "grid") return <svg {...common}><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>;
-  if (name === "layers") return <svg {...common}><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5M3 16l9 5 9-5"/></svg>;
-  if (name === "calendar") return <svg {...common}><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>;
-  if (name === "arrows") return <svg {...common}><path d="M7 7h13l-3-3M17 17H4l3 3"/><path d="m17 4 3 3-3 3M7 14l-3 3 3 3"/></svg>;
-  if (name === "bell") return <svg {...common}><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>;
-  if (name === "search") return <svg {...common}><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>;
-  if (name === "chevron") return <svg {...common}><path d="m9 18 6-6-6-6"/></svg>;
-  if (name === "download") return <svg {...common}><path d="M12 3v12m-5-5 5 5 5-5M5 20h14"/></svg>;
-  if (name === "envelop") return <svg {...common}><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg>;
-  return <svg {...common}><path d="M12 5v14M5 12h14"/></svg>;
+  const common = {
+    width: size,
+    height: size,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.7,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+  };
+  if (name === "grid")
+    return (
+      <svg {...common}>
+        <rect x="3" y="3" width="7" height="7" rx="1.5" />
+        <rect x="14" y="3" width="7" height="7" rx="1.5" />
+        <rect x="3" y="14" width="7" height="7" rx="1.5" />
+        <rect x="14" y="14" width="7" height="7" rx="1.5" />
+      </svg>
+    );
+  if (name === "layers")
+    return (
+      <svg {...common}>
+        <path d="m12 3 9 5-9 5-9-5 9-5Z" />
+        <path d="m3 12 9 5 9-5M3 16l9 5 9-5" />
+      </svg>
+    );
+  if (name === "calendar")
+    return (
+      <svg {...common}>
+        <rect x="3" y="5" width="18" height="16" rx="2" />
+        <path d="M16 3v4M8 3v4M3 10h18" />
+      </svg>
+    );
+  if (name === "arrows")
+    return (
+      <svg {...common}>
+        <path d="M7 7h13l-3-3M17 17H4l3 3" />
+        <path d="m17 4 3 3-3 3M7 14l-3 3 3 3" />
+      </svg>
+    );
+  if (name === "bell")
+    return (
+      <svg {...common}>
+        <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" />
+      </svg>
+    );
+  if (name === "search")
+    return (
+      <svg {...common}>
+        <circle cx="11" cy="11" r="7" />
+        <path d="m20 20-4-4" />
+      </svg>
+    );
+  if (name === "chevron")
+    return (
+      <svg {...common}>
+        <path d="m9 18 6-6-6-6" />
+      </svg>
+    );
+  if (name === "download")
+    return (
+      <svg {...common}>
+        <path d="M12 3v12m-5-5 5 5 5-5M5 20h14" />
+      </svg>
+    );
+  if (name === "envelop")
+    return (
+      <svg {...common}>
+        <rect x="3" y="5" width="18" height="14" rx="2" />
+        <path d="m4 7 8 6 8-6" />
+      </svg>
+    );
+  return (
+    <svg {...common}>
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  );
 }
 
 export default function Home() {
@@ -34,28 +108,50 @@ export default function Home() {
   const [themeError, setThemeError] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [monthlyInvestment, setMonthlyInvestment] = useState("0");
-  const [monthlyInvestmentCurrency, setMonthlyInvestmentCurrency] = useState<"UAH" | "USD">("UAH");
+  const [monthlyInvestmentCurrency, setMonthlyInvestmentCurrency] = useState<
+    "UAH" | "USD"
+  >("UAH");
   const [investmentSaving, setInvestmentSaving] = useState(false);
   const [investmentError, setInvestmentError] = useState("");
-  const [exchangeRates, setExchangeRates] = useState<ExchangeRates | null>(null);
-  useLayoutEffect(() => setTheme(document.documentElement.dataset.theme === "light" ? "light" : "dark"), []);
+  const [exchangeRates, setExchangeRates] = useState<ExchangeRates | null>(
+    null,
+  );
+  useLayoutEffect(
+    () =>
+      setTheme(
+        document.documentElement.dataset.theme === "light" ? "light" : "dark",
+      ),
+    [],
+  );
   useEffect(() => {
-    fetch("/api/config").then(response => response.ok ? response.json() : Promise.reject())
-      .then(config => {
+    fetch("/api/config")
+      .then((response) => (response.ok ? response.json() : Promise.reject()))
+      .then((config) => {
         setMonthlyInvestment(String(config.monthlyInvestment ?? 0));
-        setMonthlyInvestmentCurrency(config.monthlyInvestmentCurrency === "USD" ? "USD" : "UAH");
-      }).catch(() => {});
+        setMonthlyInvestmentCurrency(
+          config.monthlyInvestmentCurrency === "USD" ? "USD" : "UAH",
+        );
+      })
+      .catch(() => {});
   }, []);
   useEffect(() => {
     const controller = new AbortController();
     fetch("/api/exchange-rates", { signal: controller.signal })
-      .then(response => response.ok ? response.json() : Promise.reject())
-      .then(rates => { localStorage.setItem("exchangeRates", JSON.stringify(rates)); setExchangeRates({ ...rates, stale: false }); })
+      .then((response) => (response.ok ? response.json() : Promise.reject()))
+      .then((rates) => {
+        localStorage.setItem("exchangeRates", JSON.stringify(rates));
+        setExchangeRates({ ...rates, stale: false });
+      })
       .catch(() => {
         try {
-          const saved = JSON.parse(localStorage.getItem("exchangeRates") || "null");
-          if (saved?.USD?.rate && saved?.EUR?.rate) setExchangeRates({ ...saved, stale: true });
-        } catch { /* ignore invalid cached data */ }
+          const saved = JSON.parse(
+            localStorage.getItem("exchangeRates") || "null",
+          );
+          if (saved?.USD?.rate && saved?.EUR?.rate)
+            setExchangeRates({ ...saved, stale: true });
+        } catch {
+          /* ignore invalid cached data */
+        }
       });
     return () => controller.abort();
   }, []);
@@ -64,12 +160,24 @@ export default function Home() {
     setThemeSaving(true);
     setThemeError("");
     try {
-      const response = await fetch("/api/config", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ theme: nextTheme }) });
-      if (!response.ok) throw new Error((await response.json()).error || "Could not save appearance preference");
+      const response = await fetch("/api/config", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ theme: nextTheme }),
+      });
+      if (!response.ok)
+        throw new Error(
+          (await response.json()).error ||
+            "Could not save appearance preference",
+        );
       setTheme(nextTheme);
       document.documentElement.dataset.theme = nextTheme;
     } catch (reason) {
-      setThemeError(reason instanceof Error ? reason.message : "Could not save appearance preference");
+      setThemeError(
+        reason instanceof Error
+          ? reason.message
+          : "Could not save appearance preference",
+      );
     } finally {
       setThemeSaving(false);
     }
@@ -83,13 +191,205 @@ export default function Home() {
     setInvestmentSaving(true);
     setInvestmentError("");
     try {
-      const response = await fetch("/api/config", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ monthlyInvestment: amount, monthlyInvestmentCurrency }) });
-      if (!response.ok) throw new Error((await response.json()).error || "Could not save monthly investment");
+      const response = await fetch("/api/config", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          monthlyInvestment: amount,
+          monthlyInvestmentCurrency,
+        }),
+      });
+      if (!response.ok)
+        throw new Error(
+          (await response.json()).error || "Could not save monthly investment",
+        );
     } catch (reason) {
-      setInvestmentError(reason instanceof Error ? reason.message : "Could not save monthly investment");
+      setInvestmentError(
+        reason instanceof Error
+          ? reason.message
+          : "Could not save monthly investment",
+      );
     } finally {
       setInvestmentSaving(false);
     }
   };
-  return <div className="app-shell"><header className="topbar"><a className="brand" href="#"><span className="brand-mark"><span/></span><span>obl<span className="brand-dot">.</span>ig</span></a><nav className="main-nav" aria-label="Main navigation">{tabs.map((tab, i)=><button key={tab} onClick={()=>setActive(tab)} className={active === tab ? "nav-item active" : "nav-item"}><Icon name={["grid","layers","calendar","arrows","search","envelop"][i]}/>{tab}</button>)}</nav><div className="top-actions"><div className="exchange-rates" aria-label={`Official NBU exchange rates to hryvnia${exchangeRates?.stale ? ", cached rates; live rates unavailable" : ""}`} title={exchangeRates ? `NBU rate as of ${exchangeRates.USD.exchangedate}${exchangeRates.stale ? " · cached; live rates unavailable" : ""}` : "Official NBU exchange rates"}><span>USD <strong>{exchangeRates ? `₴${exchangeRates.USD.rate.toFixed(2)}` : "—"}</strong></span><span>EUR <strong>{exchangeRates ? `₴${exchangeRates.EUR.rate.toFixed(2)}` : "—"}</strong></span>{exchangeRates?.stale && <span className="exchange-rate-status">Cached</span>}</div><span className="top-divider"/><SignOutButton onOpenSettings={()=>setSettingsOpen(true)}/></div></header><main className="main-content">{active === "Analytics" ? <AnalyticsTab/> : active === "Bonds" ? <BondsTab/> : active === "Coupons" ? <CouponsTab/> : active === "Cashflow" ? <CashflowTab/> : active === "Live Prices" ? <LivePricesTab/> : <EnvelopTab/>}<footer className="footer"><span>© 2026 OBLIG</span><span><i/> All systems operational</span><span>Data refreshed a moment ago</span><span title="Build commit">Version {process.env.NEXT_PUBLIC_APP_VERSION}</span></footer></main>{settingsOpen && <div className="bond-modal-backdrop" onMouseDown={event=>{if(event.target===event.currentTarget)setSettingsOpen(false);}}><section className="bond-modal settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title"><div className="bond-modal-head"><div><div className="eyebrow">PREFERENCES</div><h2 id="settings-title">Settings</h2><p>Manage your dashboard preferences.</p></div><button className="modal-close" aria-label="Close settings" onClick={()=>setSettingsOpen(false)}>×</button></div><div className="settings-row"><div><strong>Appearance</strong><p>Choose the dashboard color theme.</p></div><button className="theme-toggle" onClick={toggleTheme} disabled={themeSaving}>{themeSaving ? "Saving…" : theme === "dark" ? "☀ Light mode" : "☾ Dark mode"}</button></div>{themeError && <p className="theme-error" role="alert">{themeError}</p>}<div className="settings-investment"><label><span>Monthly Investment</span><div className="investment-fields"><input aria-label="Monthly investment amount" type="number" min="0" step="any" value={monthlyInvestment} onChange={event=>setMonthlyInvestment(event.target.value)}/><select aria-label="Monthly investment currency" value={monthlyInvestmentCurrency} onChange={event=>setMonthlyInvestmentCurrency(event.target.value as "UAH" | "USD")}><option value="UAH">UAH</option><option value="USD">USD</option></select></div></label><button className="button primary" onClick={saveMonthlyInvestment} disabled={investmentSaving}>{investmentSaving ? "Saving…" : "Save"}</button></div>{investmentError && <p className="theme-error" role="alert">{investmentError}</p>}</section></div>}</div>;
+  return (
+    <div className="app-shell">
+      <header className="topbar">
+        <a className="brand" href="#">
+          <span className="brand-mark">
+            <span />
+          </span>
+          <span>
+            obl<span className="brand-dot">.</span>ig
+          </span>
+        </a>
+        <nav className="main-nav" aria-label="Main navigation">
+          {tabs.map((tab, i) => (
+            <button
+              key={tab}
+              onClick={() => setActive(tab)}
+              className={active === tab ? "nav-item active" : "nav-item"}
+            >
+              <Icon
+                name={
+                  ["grid", "layers", "calendar", "arrows", "search", "envelop"][
+                    i
+                  ]
+                }
+              />
+              {tab}
+            </button>
+          ))}
+        </nav>
+        <div className="top-actions">
+          <div
+            className="exchange-rates"
+            aria-label={`Official NBU exchange rates to hryvnia${exchangeRates?.stale ? ", cached rates; live rates unavailable" : ""}`}
+            title={
+              exchangeRates
+                ? `NBU rate as of ${exchangeRates.USD.exchangedate}${exchangeRates.stale ? " · cached; live rates unavailable" : ""}`
+                : "Official NBU exchange rates"
+            }
+          >
+            <span>
+              USD{" "}
+              <strong>
+                {exchangeRates ? `₴${exchangeRates.USD.rate.toFixed(2)}` : "—"}
+              </strong>
+            </span>
+            <span>
+              EUR{" "}
+              <strong>
+                {exchangeRates ? `₴${exchangeRates.EUR.rate.toFixed(2)}` : "—"}
+              </strong>
+            </span>
+            {exchangeRates?.stale && (
+              <span className="exchange-rate-status">Cached</span>
+            )}
+          </div>
+          <span className="top-divider" />
+          <SignOutButton onOpenSettings={() => setSettingsOpen(true)} />
+        </div>
+      </header>
+      <main className="main-content">
+        {active === "Analytics" ? (
+          <AnalyticsTab />
+        ) : active === "Bonds" ? (
+          <BondsTab />
+        ) : active === "Coupons" ? (
+          <CouponsTab />
+        ) : active === "Cashflow" ? (
+          <CashflowTab />
+        ) : active === "Live Prices" ? (
+          <LivePricesTab />
+        ) : (
+          <EnvelopTab />
+        )}
+        <footer className="footer">
+          <span>© 2026 OBLIG</span>
+          <span>
+            <i /> All systems operational
+          </span>
+          <span>Data refreshed a moment ago</span>
+          <span title="Build commit">
+            Version {process.env.NEXT_PUBLIC_APP_VERSION}
+          </span>
+        </footer>
+      </main>
+      {settingsOpen && (
+        <div
+          className="bond-modal-backdrop"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setSettingsOpen(false);
+          }}
+        >
+          <section
+            className="bond-modal settings-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="settings-title"
+          >
+            <div className="bond-modal-head">
+              <div>
+                <div className="eyebrow">PREFERENCES</div>
+                <h2 id="settings-title">Settings</h2>
+                <p>Manage your dashboard preferences.</p>
+              </div>
+              <button
+                className="modal-close"
+                aria-label="Close settings"
+                onClick={() => setSettingsOpen(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="settings-row">
+              <div>
+                <strong>Appearance</strong>
+                <p>Choose the dashboard color theme.</p>
+              </div>
+              <button
+                className="theme-toggle"
+                onClick={toggleTheme}
+                disabled={themeSaving}
+              >
+                {themeSaving
+                  ? "Saving…"
+                  : theme === "dark"
+                    ? "☀ Light mode"
+                    : "☾ Dark mode"}
+              </button>
+            </div>
+            {themeError && (
+              <p className="theme-error" role="alert">
+                {themeError}
+              </p>
+            )}
+            <div className="settings-investment">
+              <label>
+                <span>Monthly Investment</span>
+                <div className="investment-fields">
+                  <input
+                    aria-label="Monthly investment amount"
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={monthlyInvestment}
+                    onChange={(event) =>
+                      setMonthlyInvestment(event.target.value)
+                    }
+                  />
+                  <select
+                    aria-label="Monthly investment currency"
+                    value={monthlyInvestmentCurrency}
+                    onChange={(event) =>
+                      setMonthlyInvestmentCurrency(
+                        event.target.value as "UAH" | "USD",
+                      )
+                    }
+                  >
+                    <option value="UAH">UAH</option>
+                    <option value="USD">USD</option>
+                  </select>
+                </div>
+              </label>
+              <button
+                className="button primary"
+                onClick={saveMonthlyInvestment}
+                disabled={investmentSaving}
+              >
+                {investmentSaving ? "Saving…" : "Save"}
+              </button>
+            </div>
+            {investmentError && (
+              <p className="theme-error" role="alert">
+                {investmentError}
+              </p>
+            )}
+          </section>
+        </div>
+      )}
+    </div>
+  );
 }

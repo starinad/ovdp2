@@ -81,6 +81,13 @@
 .monthly-income-panel .coupon-income-amount span{display:block;min-height:1em;font-size:10px;font-weight:500;color:#98a5b6}
 .analytics-forecast{margin-bottom:16px}
 .forecast-panel{min-width:0;padding:20px}
+.forecast-input{display:grid;gap:7px;margin-top:14px;max-width:360px;color:var(--ink);font-size:12px}
+.forecast-input input{width:100%;box-sizing:border-box}
+.forecast-input small{color:var(--muted);font-size:10px}
+.forecast-legend .forecast-key-custom{border-top-color:#9b8bf4;border-top-style:dotted}
+.forecast-line-custom{stroke:#9b8bf4;stroke-dasharray:2 5}
+.forecast-dot-custom{fill:#9b8bf4}
+.forecast-readout .forecast-readout-custom{border-left:3px solid #9b8bf4}
 .forecast-legend{display:flex;flex-wrap:wrap;gap:8px 22px;margin:14px 0 6px;color:var(--muted);font-size:11px}
 .forecast-legend span{display:flex;align-items:center;gap:7px}
 .forecast-legend i{display:block;width:18px;height:0;border-top:3px solid #3477e9}
@@ -98,7 +105,7 @@
 .forecast-dot{stroke:var(--bg);stroke-width:2.5}
 .forecast-dot-purchases{fill:#3477e9}
 .forecast-dot-setting{fill:#edaa62}
-.forecast-readout{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:12px 0}
+.forecast-readout{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0}
 .forecast-readout>div{display:grid;gap:5px;padding:11px 13px;border:1px solid var(--line);border-radius:8px;color:var(--muted);font-size:10px;min-width:0}
 .forecast-readout strong{color:var(--ink);font-size:15px;font-variant-numeric:tabular-nums}
 .forecast-readout small{font-size:10px;color:var(--muted)}

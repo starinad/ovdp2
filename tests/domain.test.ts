@@ -102,6 +102,8 @@ test("forecast compounds starting capital and adds contributions at month end", 
   assert.equal(flat.length, 61);
   assert.deepEqual(flat[0], { value: 1000, contributed: 0 });
   assert.deepEqual(flat[60], { value: 7000, contributed: 6000 });
+  assert.deepEqual(buildForecast(250, 0, 1000)[60], { value: 16000, contributed: 15000 });
+  assert.deepEqual(buildForecast(0, 0, 1000)[60], { value: 1000, contributed: 0 });
   close(buildForecast(0, 0.12, 1000)[12].value, 1120);
   close(buildForecast(100, 0.12, 1000)[1].value, 1000 * 1.12 ** (1 / 12) + 100);
 });

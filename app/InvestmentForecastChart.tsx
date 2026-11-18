@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useEffect,
   useMemo,
   useState,
   type KeyboardEvent,
@@ -25,6 +26,24 @@ export default function InvestmentForecastChart({
   startingValue: number;
 }) {
   const [active, setActive] = useState<number | null>(null);
+  const [customInput, setCustomInput] = useState<string | null>(null);
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("forecast-monthly-investment");
+      if (saved !== null && saved.trim() !== "" && Number.isFinite(Number(saved)) && Number(saved) >= 0) {
+        setCustomInput(saved);
+      }
+    } catch {
+      // Browser storage may be disabled; the Settings default still works.
+    }
+  }, []);
+  const customValue = customInput ?? String(settingContribution ?? 0);
+  const customContribution = Number(customValue);
+  const hasCustom = customValue.trim() !== "" && Number.isFinite(customContribution) && customContribution >= 0;
+  const custom = useMemo(
+    () => hasCustom ? buildForecast(customContribution, annualRate, startingValue) : null,
+    [hasCustom, customContribution, annualRate, startingValue],
+  );
   const W = 650,
     H = 262,
     L = 58,
@@ -77,6 +96,7 @@ export default function InvestmentForecastChart({
     1,
     purchases?.[FORECAST_MONTHS].value ?? 0,
     setting?.[FORECAST_MONTHS].value ?? 0,
+    custom?.[FORECAST_MONTHS].value ?? 0,
   );
   const x = (index: number) => L + (index / FORECAST_MONTHS) * (R - L);
   const y = (amount: number) => B - (amount / max) * (B - T);
@@ -124,6 +144,7 @@ export default function InvestmentForecastChart({
       : { total: "—", detail: "Scenario unavailable" };
   const purchasesReadout = readout(purchases);
   const settingReadout = readout(setting);
+  const customReadout = readout(custom);
   const summary = `Five-year forecast. ${labels[shown].long}: ${hasSetting ? "Monthly Investment setting scenario " + settingReadout.total : "Monthly Investment setting scenario unavailable"}; ${hasPurchases ? "last month's purchases scenario " + purchasesReadout.total : "last month's purchases scenario unavailable"}.`;
   return (
     <article className="panel analytics-fx-panel forecast-panel">
@@ -135,6 +156,32 @@ export default function InvestmentForecastChart({
             reinvested at {percent(annualRate)} a year
           </p>
         </div>
+      </div>
+      <div className="forecast-input form-field">
+        <label htmlFor="forecast-monthly-investment">Custom monthly investment · UAH</label>
+        <input
+          id="forecast-monthly-investment"
+          type="number"
+          min="0"
+          step="any"
+          value={customValue}
+          onChange={(event) => {
+            const value = event.target.value;
+            setCustomInput(value);
+            if (value.trim() !== "" && Number.isFinite(Number(value)) && Number(value) >= 0) {
+              try {
+                localStorage.setItem("forecast-monthly-investment", value);
+              } catch {
+                // Keep the forecast editable when browser storage is disabled.
+              }
+            }
+          }}
+          aria-describedby="forecast-monthly-help"
+          aria-invalid={!hasCustom}
+        />
+        <small id="forecast-monthly-help">
+          {hasCustom ? "Defaults to Settings in UAH. Your custom amount is remembered in this browser without changing Settings." : "Enter a monthly amount of zero or more."}
+        </small>
       </div>
       <div className="forecast-legend">
         <span>
@@ -155,8 +202,12 @@ export default function InvestmentForecastChart({
               : "no purchases"}
           </em>
         </span>
+        <span>
+          <i className="forecast-key-custom" />
+          Custom monthly investment · <em>{hasCustom ? preciseMoney(customContribution) + "/mo" : "enter an amount"}</em>
+        </span>
       </div>
-      {hasPurchases || hasSetting ? (
+      {hasPurchases || hasSetting || hasCustom ? (
         <>
           <div
             className="forecast-chart"
@@ -172,7 +223,7 @@ export default function InvestmentForecastChart({
             onFocus={() => setActive((current) => current ?? FORECAST_MONTHS)}
             onBlur={() => setActive(null)}
           >
-            <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={summary}>
+            <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${summary} Custom monthly investment: ${customReadout.total}.`}>
               {[0, 0.25, 0.5, 0.75, 1].map((fraction) => {
                 const amount = max * fraction;
                 const lineY = y(amount);
@@ -228,6 +279,9 @@ export default function InvestmentForecastChart({
                   className="forecast-line forecast-line-purchases"
                 />
               )}
+              {custom && (
+                <polyline points={points(custom)} className="forecast-line forecast-line-custom" />
+              )}
               {active !== null && (
                 <g>
                   <line
@@ -253,6 +307,9 @@ export default function InvestmentForecastChart({
                       className="forecast-dot forecast-dot-purchases"
                     />
                   )}
+                  {custom && (
+                    <circle cx={x(active)} cy={y(custom[active].value)} r="6" className="forecast-dot forecast-dot-custom" />
+                  )}
                 </g>
               )}
             </svg>
@@ -277,12 +334,16 @@ export default function InvestmentForecastChart({
               <strong>{purchasesReadout.total}</strong>
               <small>{purchasesReadout.detail}</small>
             </div>
+            <div className="forecast-readout-custom">
+              <span>Custom monthly investment</span>
+              <strong>{customReadout.total}</strong>
+              <small>{customReadout.detail}</small>
+            </div>
           </div>
         </>
       ) : (
         <div className="analytics-empty">
-          No bonds were bought last month and no Monthly Investment is saved in
-          Settings, so there is nothing to project.
+          Enter a custom monthly investment or save a Monthly Investment in Settings to see a forecast.
         </div>
       )}
       <ul className="forecast-assumptions">

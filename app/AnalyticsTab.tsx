@@ -162,9 +162,11 @@ function CashflowChart({
 function MonthlyIncomeChart({
   bonds,
   coupons,
+  usdRate,
 }: {
   bonds: Bond[];
   coupons: Coupon[];
+  usdRate: number | null;
 }) {
   const months = useMemo(() => {
     return monthlyIncomeSnapshots(new Date()).map((snapshot) => {
@@ -210,7 +212,7 @@ function MonthlyIncomeChart({
         <div>
           <h2>Monthly average income · UAH</h2>
           <p>
-            Next 12 months of scheduled net UAH coupons. Past months use the 28th; the current month uses today.
+            Next 12 months of scheduled net UAH coupons. Past months use the 28th; the current month uses today. USD equivalents use today’s NBU rate.
           </p>
         </div>
       </div>
@@ -234,6 +236,9 @@ function MonthlyIncomeChart({
               </div>
               <strong className="coupon-income-amount">
                 {incomeMoney(month.amount)}
+                {usdRate !== null && usdRate > 0
+                  ? ` (${preciseCurrency(month.amount / usdRate, "USD")})`
+                  : " (USD unavailable)"}
                 <span>
                   {change !== null
                     ? ` (${change >= 0 ? "+" : "−"}${incomeMoney(Math.abs(change))})`
@@ -1199,7 +1204,7 @@ export default function AnalyticsTab() {
             />
           </section>
           <section className="analytics-income-history">
-            <MonthlyIncomeChart bonds={bonds} coupons={coupons} />
+            <MonthlyIncomeChart bonds={bonds} coupons={coupons} usdRate={exchangeRates?.USD.rate ?? null} />
           </section>
           <section className="overview-grid analytics-overview">
             <CashflowChart

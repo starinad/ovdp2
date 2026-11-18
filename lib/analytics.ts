@@ -62,7 +62,7 @@ export function xirr(flows: CashFlow[]) {
   return (low + high) / 2;
 }
 
-export const FORECAST_MONTHS = 36;
+export const FORECAST_MONTHS = 60;
 
 export function buildForecast(
   contribution: number,

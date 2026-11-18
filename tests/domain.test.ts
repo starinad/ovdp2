@@ -99,9 +99,9 @@ test("currency conversion preserves same-currency amounts and crosses through UA
 
 test("forecast compounds starting capital and adds contributions at month end", () => {
   const flat = buildForecast(100, 0, 1000);
-  assert.equal(flat.length, 37);
+  assert.equal(flat.length, 61);
   assert.deepEqual(flat[0], { value: 1000, contributed: 0 });
-  assert.deepEqual(flat[36], { value: 4600, contributed: 3600 });
+  assert.deepEqual(flat[60], { value: 7000, contributed: 6000 });
   close(buildForecast(0, 0.12, 1000)[12].value, 1120);
   close(buildForecast(100, 0.12, 1000)[1].value, 1000 * 1.12 ** (1 / 12) + 100);
 });

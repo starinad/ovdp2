@@ -124,12 +124,12 @@ export default function InvestmentForecastChart({
       : { total: "—", detail: "Scenario unavailable" };
   const purchasesReadout = readout(purchases);
   const settingReadout = readout(setting);
-  const summary = `Three-year forecast. ${labels[shown].long}: ${hasSetting ? "Monthly Investment setting scenario " + settingReadout.total : "Monthly Investment setting scenario unavailable"}; ${hasPurchases ? "last month's purchases scenario " + purchasesReadout.total : "last month's purchases scenario unavailable"}.`;
+  const summary = `Five-year forecast. ${labels[shown].long}: ${hasSetting ? "Monthly Investment setting scenario " + settingReadout.total : "Monthly Investment setting scenario unavailable"}; ${hasPurchases ? "last month's purchases scenario " + purchasesReadout.total : "last month's purchases scenario unavailable"}.`;
   return (
     <article className="panel analytics-fx-panel forecast-panel">
       <div className="panel-head">
         <div>
-          <h2>Three-year investment forecast · UAH</h2>
+          <h2>Five-year investment forecast · UAH</h2>
           <p>
             Projected value of repeating monthly contributions with coupons
             reinvested at {percent(annualRate)} a year
@@ -199,7 +199,7 @@ export default function InvestmentForecastChart({
                   </g>
                 );
               })}
-              {[0, 12, 24, 36].map((index) => (
+              {[0, 12, 24, 36, 48, 60].map((index) => (
                 <text
                   key={index}
                   x={x(index)}
@@ -289,7 +289,7 @@ export default function InvestmentForecastChart({
         <li>
           Starts with existing active and pending bond face value of{" "}
           {preciseMoney(startingValue)}, converted to UAH at current NBU rates.
-          Contributions land at the end of each month for 36 months, beginning
+          Contributions land at the end of each month for {FORECAST_MONTHS} months, beginning
           next month.
         </li>
         <li>

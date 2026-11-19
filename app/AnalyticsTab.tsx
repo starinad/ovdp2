@@ -9,6 +9,7 @@ import type {
   HistoricalRates,
 } from "@/lib/exchange-rates";
 import {
+  isCurrentPosition,
   ratesOnDate,
   toBaseCurrency,
   xirr,
@@ -639,15 +640,15 @@ export default function AnalyticsTab() {
     };
   }, []);
 
+  const today = new Date().toLocaleDateString("sv-SE");
   const positions = useMemo(() => {
     return bonds
-      .filter((b) => ["ACTIVE", "PENDING"].includes(b.status))
+      .filter((b) => isCurrentPosition(b, today))
       .map((b) => {
         const maturity = new Date(`${b.maturityDate.slice(0, 10)}T00:00:00Z`);
-        const asOf = new Date().toLocaleDateString("sv-SE");
         const monthsToMaturity = Math.max(
           0,
-          (maturity.getTime() - new Date(`${asOf}T00:00:00Z`).getTime()) /
+          (maturity.getTime() - new Date(`${today}T00:00:00Z`).getTime()) /
             86_400_000 /
             30.4375,
         );
@@ -658,7 +659,7 @@ export default function AnalyticsTab() {
           monthsToMaturity,
         };
       });
-  }, [bonds]);
+  }, [bonds, today]);
   const liveFx = useMemo<FxRates>(
     () => ({
       USD: Number(exchangeRates?.USD.rate) || 1,
@@ -667,18 +668,10 @@ export default function AnalyticsTab() {
     [exchangeRates],
   );
   const baseCurrencies: Currency[] = ["UAH", "USD", "EUR"];
-  const today = new Date().toLocaleDateString("sv-SE");
-  const activeIds = new Set(
-    bonds
-      .filter((bond) => ["ACTIVE", "PENDING"].includes(bond.status))
-      .map((bond) => bond.id),
-  );
-  const incomeBondIds = new Set(
-    bonds.filter((bond) => bond.status !== "SOLD").map((bond) => bond.id),
-  );
+  const activeIds = new Set(positions.map((bond) => bond.id));
   const receivedCoupons = coupons.filter(
     (coupon) =>
-      incomeBondIds.has(coupon.bondId) &&
+      activeIds.has(coupon.bondId) &&
       coupon.status !== "CANCELLED" &&
       coupon.paymentDate.slice(0, 10) <= today,
   );
@@ -781,9 +774,7 @@ export default function AnalyticsTab() {
     .reduce((sum, c) => sum + Number(c.netAmount), 0);
   const currencies = ["UAH"];
   const metrics = currencies.map((currency) => {
-    const currencyBonds = bonds.filter(
-      (b) => b.currency === currency && b.status !== "SOLD",
-    );
+    const currencyBonds = positions.filter((b) => b.currency === currency);
     const eligibleIds = new Set(currencyBonds.map((b) => b.id));
     const flows: CashFlow[] = currencyBonds.flatMap((bond) => {
       const principal = Number(bond.faceValue) * Number(bond.quantity);
@@ -1149,7 +1140,7 @@ export default function AnalyticsTab() {
               <p className="fx-note">
                 * Profit = bond change + FX impact + coupons received. Coupon
                 count includes non-cancelled coupons dated through today for
-                active, matured, and redeemed bonds; sold bonds are excluded.
+                current positions only; bonds past maturity are excluded.
                 Actual receipt isn’t tracked. FX conversions use NBU rates on or
                 before purchase/payment dates, then live rates if history is
                 unavailable.

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getPool } from "@/lib/db";
-import { validateBond } from "@/lib/bond-types";
+import { effectiveBondStatus, validateBond } from "@/lib/bond-types";
 import { replaceCouponSchedule } from "@/lib/coupons";
 import { requireUserId } from "@/lib/require-user";
 import { bondColumns } from "@/lib/bond-columns";
@@ -17,6 +17,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   let bond: unknown;
   try { bond = await request.json(); } catch { return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 }); }
   if (!validateBond(bond)) return NextResponse.json({ error: "Please provide valid bond details" }, { status: 400 });
+  bond.status = effectiveBondStatus(bond);
   let client: PoolClient | undefined;
   try {
     client = await getPool().connect();

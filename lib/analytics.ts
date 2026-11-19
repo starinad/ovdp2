@@ -1,4 +1,4 @@
-import type { Currency } from "./bond-types";
+import { effectiveBondStatus, type Bond, type Currency } from "./bond-types";
 import {
   rateAtDate,
   type FxRates,
@@ -6,6 +6,13 @@ import {
 } from "./exchange-rates";
 
 export type CashFlow = { date: string; amount: number };
+
+export function isCurrentPosition(
+  bond: Pick<Bond, "status" | "maturityDate">,
+  today: string,
+) {
+  return ["ACTIVE", "PENDING"].includes(effectiveBondStatus(bond, today));
+}
 
 export function toBaseCurrency(
   value: number,

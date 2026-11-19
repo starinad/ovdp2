@@ -47,6 +47,16 @@ export type Bond = Omit<BondInput, "quantity"> & {
   quantity: number;
 };
 
+export function effectiveBondStatus(
+  bond: Pick<BondInput, "status" | "maturityDate">,
+  today = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Kyiv" }),
+): BondInput["status"] {
+  return ["ACTIVE", "PENDING"].includes(bond.status) &&
+    bond.maturityDate.slice(0, 10) < today
+    ? "MATURED"
+    : bond.status;
+}
+
 export function validateBond(value: unknown): value is BondInput {
   if (!value || typeof value !== "object") return false;
   const bond = value as Record<string, unknown>;

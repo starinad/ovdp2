@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getPool } from "@/lib/db";
-import { validateBond } from "@/lib/bond-types";
+import { effectiveBondStatus, validateBond, type Bond } from "@/lib/bond-types";
 import { replaceCouponSchedule } from "@/lib/coupons";
 import { requireUserId } from "@/lib/require-user";
 import { bondColumns } from "@/lib/bond-columns";
@@ -12,8 +12,11 @@ export async function GET() {
   const ownerId = await requireUserId();
   if (!ownerId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
-    const { rows } = await getPool().query(`SELECT ${bondColumns} FROM bonds WHERE owner_id = $1 ORDER BY maturity_date, purchase_date, name COLLATE "C", isin, id`, [ownerId]);
-    return NextResponse.json(rows);
+    const { rows } = await getPool().query<Bond>(`SELECT ${bondColumns} FROM bonds WHERE owner_id = $1 ORDER BY maturity_date, purchase_date, name COLLATE "C", isin, id`, [ownerId]);
+    return NextResponse.json(rows.map((bond) => ({
+      ...bond,
+      status: effectiveBondStatus(bond),
+    })));
   } catch (error) {
     console.error("Could not load bonds", error);
     return NextResponse.json({ error: "Could not load bonds. Check the database connection and schema." }, { status: 503 });
@@ -26,6 +29,7 @@ export async function POST(request: Request) {
   let bond: unknown;
   try { bond = await request.json(); } catch { return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 }); }
   if (!validateBond(bond)) return NextResponse.json({ error: "Please provide valid bond details" }, { status: 400 });
+  bond.status = effectiveBondStatus(bond);
   let client: PoolClient | undefined;
   try {
     client = await getPool().connect();

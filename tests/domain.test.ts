@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   buildForecast,
+  isCurrentPosition,
   ratesOnDate,
   toBaseCurrency,
   xirr,
@@ -9,7 +10,7 @@ import {
 import { isIsoDate, monthlyIncomeSnapshots } from "../lib/dates";
 import { rateAtDate, type HistoricalRates } from "../lib/exchange-rates";
 import { validatePurchase } from "../lib/envelop-types";
-import { validateBond, type BondInput } from "../lib/bond-types";
+import { effectiveBondStatus, validateBond, type BondInput } from "../lib/bond-types";
 import { generateCoupons } from "../lib/coupons";
 
 const bond: BondInput = {
@@ -151,4 +152,30 @@ test("coupon schedules keep interest separate from principal and respect tax and
     generateCoupons({ ...bond, fixedCoupon: "50" })[0].grossAmount,
     100,
   );
+});
+
+test("current analytics positions exclude past maturities even when still ACTIVE", () => {
+  const today = "2026-11-19";
+  assert.equal(isCurrentPosition({ status: "ACTIVE", maturityDate: "2026-11-18T00:00:00.000Z" }, today), false);
+  for (const status of ["ACTIVE", "PENDING"] as const) {
+    assert.equal(isCurrentPosition({ status, maturityDate: today }, today), true);
+    assert.equal(isCurrentPosition({ status, maturityDate: "2026-11-20" }, today), true);
+  }
+  for (const status of ["MATURED", "REDEEMED", "SOLD"] as const) {
+    assert.equal(isCurrentPosition({ status, maturityDate: "2026-11-20" }, today), false);
+  }
+});
+
+test("bond status advances past maturity across reads and writes", () => {
+  const today = "2026-11-19";
+  for (const status of ["ACTIVE", "PENDING"] as const) {
+    assert.equal(effectiveBondStatus({ status, maturityDate: "2026-11-18" }, today), "MATURED");
+    assert.equal(effectiveBondStatus({ status, maturityDate: "2026-11-18T00:00:00.000Z" }, today), "MATURED");
+    assert.equal(effectiveBondStatus({ status, maturityDate: today }, today), status);
+    assert.equal(effectiveBondStatus({ status, maturityDate: "2026-11-20" }, today), status);
+  }
+  for (const status of ["MATURED", "SOLD", "REDEEMED"] as const) {
+    assert.equal(effectiveBondStatus({ status, maturityDate: "2026-11-18" }, today), status);
+    assert.equal(effectiveBondStatus({ status, maturityDate: "2026-11-20" }, today), status);
+  }
 });
